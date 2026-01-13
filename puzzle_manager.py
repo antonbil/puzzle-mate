@@ -746,7 +746,6 @@ class ChessPuzzleApp(tk.Toplevel):
             if self.solve_step >= len(p['solution']):
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
                 self.engine.total_score += puzzle_result
-                self.engine.total_solved += 1
                 messagebox.showinfo("Correct", "Solved!")
                 self._show_solution_and_continue(puzzle_result)
             else:
