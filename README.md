@@ -43,7 +43,7 @@ Training PGN: If player names contain "White wins" or "Black wins", the first mo
 The app automatically generates two types of files:
 
 - config.json: Stores the list of recently opened files.
-- [filename]_results.json: Stores your score and history for that specific database.
+- [filename]_results.json: Stores your scores and history for that specific database.
 
 ## 📝 License
 This project is open-source. Feel free to modify and improve it!
