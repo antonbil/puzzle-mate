@@ -16,9 +16,13 @@ from PIL import Image, ImageTk
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle, original_images):
+    def __init__(self, parent, puzzle, original_images, score=None):
         super().__init__(parent)
         self.title(f"Review: {puzzle['event']}")
+        # Header with score
+        score_text = f" (Score: {score})" if score is not None else ""
+        tk.Label(self, text=f"Review: {puzzle['display_name']}{score_text}",
+                 font=("Arial", 12, "bold")).pack(pady=5)
         self.puzzle = puzzle
 
         self.review_images = {}
@@ -144,39 +148,94 @@ class HistoryWindow(tk.Toplevel):
     def __init__(self, parent, engine, piece_images):
         super().__init__(parent)
         self.title("Puzzle History")
-        self.geometry("700x450")
-        self.engine = engine
+        self.geometry("450x400")
+
+        # Use the new results_log instead of played_history
+        self.results_log = engine.results_log
+        self.puzzles = engine.puzzles
         self.piece_images = piece_images
 
-        cols = ("id", "name", "rating", "result")
-        self.tree = ttk.Treeview(self, columns=cols, show='headings')
-        self.tree.heading("id", text="ID")
-        self.tree.heading("name", text="Info / Players")
-        self.tree.heading("rating", text="Rating")
-        self.tree.heading("result", text="Result")
+        # Table setup
+        columns = ("#", "Puzzle Name", "Score", "Status")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings")
 
-        self.tree.column("id", width=40, anchor=tk.CENTER)
-        self.tree.column("name", width=400)
-        self.tree.column("rating", width=80, anchor=tk.CENTER)
-        self.tree.column("result", width=100, anchor=tk.CENTER)
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=80 if col != "Puzzle Name" else 180)
 
-        for idx_str, status in engine.played_history.items():
-            idx = int(idx_str)
-            p = engine.puzzles[idx]
-            name = (p['display_name'] if p['display_name'] else p['event']).replace("? - ?", "")
-            rating = p['rating'] if p['rating'] != "N/A" else ""
-            self.tree.insert("", tk.END, values=(idx, name, rating, status))
+        # Tags for coloring results
+        self.tree.tag_configure("perfect", foreground="#27ae60")  # Green
+        self.tree.tag_configure("partial", foreground="#f39c12")  # Orange
+        self.tree.tag_configure("failed", foreground="#e74c3c")  # Red
+        self.tree.tag_configure("skipped", foreground="#95a5a6")  # Grey
 
-        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.tree.bind("<Double-1>", self._on_select)
-        ttk.Button(self, text="Close", command=self.destroy).pack(pady=5)
+        # Populate history
+        for idx, score in self.results_log:
+            puzzle = self.puzzles[idx]
+            name = puzzle.get('display_name') or puzzle.get('event')
 
-    def _on_select(self, event):
-        item = self.tree.selection()
-        if item:
-            p_id = self.tree.item(item)['values'][0]
-            HistoryDetailWindow(self, self.engine.puzzles[int(p_id)], self.piece_images)
+            # Determine status and tag based on score
+            if score == 10:
+                status, tag = "Perfect", "perfect"
+            elif score > 0:
+                status, tag = "Solved", "partial"
+            elif score == 0:
+                status, tag = "Failed", "failed"
+            else:
+                status, tag = "Skipped", "skipped"
 
+            self.tree.insert("", tk.END, values=(idx, name, score, status), tags=(tag,))
+
+        self.tree.pack(expand=True, fill=tk.X)
+        self.tree.bind("<Double-1>", self._on_double_click)
+
+    def _on_double_click(self, event):
+        """ Opens detail for a previously played puzzle. """
+        item = self.tree.selection()[0]
+        idx = int(self.tree.item(item, "values")[0])
+        score = int(self.tree.item(item, "values")[2])
+        HistoryDetailWindow(self, self.puzzles[idx], self.piece_images, score)
+
+class ProgressWindow(tk.Toplevel):
+    def __init__(self, parent, results_log):
+        super().__init__(parent)
+        self.title("Progress Tracker")
+        self.geometry("400x300")
+
+        canvas = tk.Canvas(self, bg="white", width=350, height=200)
+        canvas.pack(pady=20, padx=20)
+
+        if not results_log:
+            canvas.create_text(175, 100, text="No data yet")
+            return
+
+        # Calculate cumulative scores for the line chart
+        scores = []
+        current = 0
+        for _, s in results_log:
+            current += s
+            scores.append(current)
+
+        # Scaling logic
+        max_s = max(scores) if scores else 1
+        min_s = min(scores) if scores else 0
+        range_s = max_s - min_s if max_s != min_s else 1
+
+        width = 350
+        height = 200
+        dx = width / len(scores)
+
+        points = []
+        for i, s in enumerate(scores):
+            x = i * dx
+            # Normalize y: flip because canvas 0,0 is top-left
+            y = height - ((s - min_s) / range_s * height)
+            points.extend([x, y])
+
+        if len(points) > 2:
+            canvas.create_line(points, fill="blue", width=2, smooth=True)
+
+        tk.Label(self, text=f"Current Total Score: {current}", font=("Arial", 10, "bold")).pack()
 # --- PUZZLE ENGINE ---
 
 class PuzzleEngine:
@@ -184,15 +243,17 @@ class PuzzleEngine:
         base_name = os.path.splitext(pgn_file)[0]
         self.save_file = f"{base_name}_results.json"
 
-        if os.path.exists(pgn_file):
-            self.puzzles = self._load_puzzles(pgn_file)
-        else:
-            self.puzzles = []
+        self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
 
+        # Load the new structure
         state = self._load_state()
-        self.total_score = state.get("total_score", 0)
-        self.total_solved = state.get("total_solved", 0)
-        self.played_history = state.get("played_history", {})
+        self.results_log = state.get("results_log", [])  # List of [index, score]
+
+        # Derived properties (calculated on the fly)
+        self.total_score = sum(r[1] for r in self.results_log)
+        self.total_done = len(self.results_log)
+        self.total_solved = len([r for r in self.results_log if r[1] > 0])
+
         self.current_index = -1
 
     def _load_puzzles(self, filename):
@@ -239,25 +300,19 @@ class PuzzleEngine:
         if os.path.exists(self.save_file):
             try:
                 with open(self.save_file, 'r') as f:
-                    data = json.load(f)
-                    # We voegen de nieuwe parameter toe met 0 als default
-                    self.total_done = data.get("total_done", 0)
-                    return data
+                    return json.load(f)
             except: pass
-        self.total_done = 0
-        return {"total_score": 0, "total_solved": 0, "total_done": 0, "played_history": {}}
+        return {"results_log": []}
 
     def save_state(self):
         with open(self.save_file, 'w') as f:
-            json.dump({
-                "total_score": self.total_score,
-                "total_solved": self.total_solved,
-                "total_done": self.total_done, # Nieuwe parameter opslaan
-                "played_history": self.played_history
-            }, f)
+            json.dump({"results_log": self.results_log}, f)
 
     def get_next_random_puzzle(self):
-        remaining = [i for i in range(len(self.puzzles)) if str(i) not in self.played_history]
+        # Exclude puzzles already present in the results_log
+        played_indices = {r[0] for r in self.results_log}
+        remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
+
         if not remaining: return None
         self.current_index = random.choice(remaining)
         return self.puzzles[self.current_index]
@@ -353,6 +408,7 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="History", command=lambda: HistoryWindow(self, self.engine, self.piece_images))
+        view_menu.add_command(label="Show Progress", command=lambda: ProgressWindow(self, self.engine.results_log))
 
     def _setup_ui(self):
         header = tk.Frame(self, pady=10, bg="#f7f7f7")
@@ -461,17 +517,23 @@ class ChessPuzzleApp(tk.Toplevel):
         self.refresh_board()
         return True
 
-    def _show_solution_and_continue(self, status="Failed"):
+    def _show_solution_and_continue(self, result_score=0):
+        """ result_score: 10/5/2 for solved, 0 for failed, -5 for skipped """
         self.refresh_board()
-        p = self.engine.puzzles[self.engine.current_index]
 
-        # Registreer de poging
-        self.engine.played_history[str(self.engine.current_index)] = status
-        self.engine.total_done += 1  # Elke afgeronde puzzel telt als 'done'
+        # Append to the log: [index, score]
+        self.engine.results_log.append([self.engine.current_index, result_score])
+
+        # Update running totals for the UI
+        self.engine.total_score += result_score
+        self.engine.total_done += 1
+        if result_score > 0:
+            self.engine.total_solved += 1
 
         self.engine.save_state()
 
-        review = HistoryDetailWindow(self, p, self.piece_images)
+        p = self.engine.puzzles[self.engine.current_index]
+        review = HistoryDetailWindow(self, p, self.piece_images, result_score)
         self.wait_window(review)
         self.load_puzzle()
 
