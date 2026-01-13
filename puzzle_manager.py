@@ -239,15 +239,22 @@ class PuzzleEngine:
         if os.path.exists(self.save_file):
             try:
                 with open(self.save_file, 'r') as f:
-                    return json.load(f)
-            except:
-                pass
-        return {"total_score": 0, "total_solved": 0, "played_history": {}}
+                    data = json.load(f)
+                    # We voegen de nieuwe parameter toe met 0 als default
+                    self.total_done = data.get("total_done", 0)
+                    return data
+            except: pass
+        self.total_done = 0
+        return {"total_score": 0, "total_solved": 0, "total_done": 0, "played_history": {}}
 
     def save_state(self):
         with open(self.save_file, 'w') as f:
-            json.dump({"total_score": self.total_score, "total_solved": self.total_solved,
-                       "played_history": self.played_history}, f)
+            json.dump({
+                "total_score": self.total_score,
+                "total_solved": self.total_solved,
+                "total_done": self.total_done, # Nieuwe parameter opslaan
+                "played_history": self.played_history
+            }, f)
 
     def get_next_random_puzzle(self):
         remaining = [i for i in range(len(self.puzzles)) if str(i) not in self.played_history]
@@ -457,8 +464,13 @@ class ChessPuzzleApp(tk.Toplevel):
     def _show_solution_and_continue(self, status="Failed"):
         self.refresh_board()
         p = self.engine.puzzles[self.engine.current_index]
+
+        # Registreer de poging
         self.engine.played_history[str(self.engine.current_index)] = status
+        self.engine.total_done += 1  # Elke afgeronde puzzel telt als 'done'
+
         self.engine.save_state()
+
         review = HistoryDetailWindow(self, p, self.piece_images)
         self.wait_window(review)
         self.load_puzzle()
@@ -544,7 +556,10 @@ class ChessPuzzleApp(tk.Toplevel):
             self._show_solution_and_continue("Skipped")
 
     def update_status_display(self):
-        self.lbl_overall.config(text=f"Score: {self.engine.total_score} | Solved: {self.engine.total_solved}")
+        status_text = (f"Score: {self.engine.total_score} | "
+                       f"Done: {self.engine.total_done} | "
+                       f"Solved: {self.engine.total_solved}")
+        self.lbl_overall.config(text=status_text)
         self.lbl_attempts.config(text=f"Attempts left: {self.attempts_left}")
 
     def _load_images(self):
