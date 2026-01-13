@@ -143,116 +143,217 @@ class HistoryDetailWindow(tk.Toplevel):
 
 
 # --- HISTORY LIST WINDOW ---
-
 class HistoryWindow(tk.Toplevel):
     def __init__(self, parent, engine, piece_images):
         super().__init__(parent)
+        self.parent = parent
         self.title("Puzzle History")
-        self.geometry("450x400")
+        self.geometry("600x600")  # Slightly wider for larger fonts
 
-        # Use the new results_log instead of played_history
         self.results_log = engine.results_log
         self.puzzles = engine.puzzles
         self.piece_images = piece_images
 
-        # Table setup
+        # --- Touch Friendly Style Configuration ---
+        self.style = ttk.Style()
+        # Set row height to 45 and font size to 12 for the body
+        self.style.configure("Touch.Treeview",
+                             rowheight=45,
+                             font=('Arial', 12))
+        # Set font size for the headers as well
+        self.style.configure("Touch.Treeview.Heading",
+                             font=('Arial', 12, 'bold'))
+
+        # 1. List section setup using the Touch style
         columns = ("#", "Puzzle Name", "Score", "Status")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings",
+                                 selectmode="browse", style="Touch.Treeview")
 
         for col in columns:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=80 if col != "Puzzle Name" else 180)
+            # Adjust column widths for larger text
+            width = 60 if col == "#" else 100 if col in ["Score", "Status"] else 250
+            self.tree.column(col, width=width)
 
-        # Tags for coloring results
-        self.tree.tag_configure("perfect", foreground="#27ae60")  # Green
-        self.tree.tag_configure("partial", foreground="#f39c12")  # Orange
-        self.tree.tag_configure("failed", foreground="#e74c3c")  # Red
-        self.tree.tag_configure("skipped", foreground="#95a5a6")  # Grey
+        # Result coloring (remains same)
+        self.tree.tag_configure("perfect", foreground="#27ae60")
+        self.tree.tag_configure("partial", foreground="#f39c12")
+        self.tree.tag_configure("failed", foreground="#e74c3c")
+        self.tree.tag_configure("skipped", foreground="#95a5a6")
 
-        # Populate history
+        self.item_ids = []
         for idx, score in self.results_log:
-            puzzle = self.puzzles[idx]
-            name = puzzle.get('display_name') or puzzle.get('event')
+            p = self.puzzles[idx]
+            name = p.get('display_name') or p.get('event')
+            status = "Perfect" if score == 10 else "Solved" if score > 0 else "Failed" if score == 0 else "Skipped"
+            tag = "perfect" if score == 10 else "partial" if score > 0 else "failed" if score == 0 else "skipped"
 
-            # Determine status and tag based on score
-            if score == 10:
-                status, tag = "Perfect", "perfect"
-            elif score > 0:
-                status, tag = "Solved", "partial"
-            elif score == 0:
-                status, tag = "Failed", "failed"
+            item_id = self.tree.insert("", tk.END, values=(idx, name, score, status), tags=(tag,))
+            self.item_ids.append(item_id)
+
+        self.tree.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+        self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+        self.tree.bind("<Double-1>", lambda e: self._open_detail())
+
+        # 2. Navigation Footer (Larger buttons for touch)
+        footer = tk.Frame(self, pady=15)
+        footer.pack(fill=tk.X)
+
+        # Larger padding and wider buttons
+        self.btn_prev = ttk.Button(footer, text=" << ", width=8, command=self._prev_item)
+        self.btn_prev.pack(side=tk.LEFT, padx=20)
+
+        max_idx = max(0, len(self.item_ids) - 1)
+        self.nav_slider = ttk.Scale(footer, from_=0, to=max_idx, orient=tk.HORIZONTAL, command=self._on_slider_move)
+        self.nav_slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.btn_next = ttk.Button(footer, text=" >> ", width=8, command=self._next_item)
+        self.btn_next.pack(side=tk.RIGHT, padx=20)
+
+        # Initial selection logic
+        if self.item_ids:
+            if hasattr(self.parent, 'last_history_index') and self.parent.last_history_index < len(self.item_ids):
+                if hasattr(self.parent, 'history_count_at_last_view') and len(
+                        self.item_ids) > self.parent.history_count_at_last_view:
+                    start_idx = len(self.item_ids) - 1
+                else:
+                    start_idx = self.parent.last_history_index
             else:
-                status, tag = "Skipped", "skipped"
+                start_idx = len(self.item_ids) - 1
 
-            self.tree.insert("", tk.END, values=(idx, name, score, status), tags=(tag,))
+            self.nav_slider.set(start_idx)
+            self._on_slider_move(start_idx)
+            self.parent.history_count_at_last_view = len(self.item_ids)
 
-        self.tree.pack(expand=True, fill=tk.X)
-        self.tree.bind("<Double-1>", self._on_double_click)
+    def _on_slider_move(self, value):
+        if not self.item_ids: return
+        idx = int(float(value))
+        if 0 <= idx < len(self.item_ids):
+            target_id = self.item_ids[idx]
+            if self.tree.selection() != (target_id,):
+                self.tree.selection_set(target_id)
+                self.tree.see(target_id)
+            self.parent.last_history_index = idx
 
-    def _on_double_click(self, event):
-        """ Opens detail for a previously played puzzle. """
-        item = self.tree.selection()[0]
-        idx = int(self.tree.item(item, "values")[0])
-        score = int(self.tree.item(item, "values")[2])
-        HistoryDetailWindow(self, self.puzzles[idx], self.piece_images, score)
+    def _on_tree_select(self, event):
+        selected = self.tree.selection()
+        if selected and selected[0] in self.item_ids:
+            idx = self.item_ids.index(selected[0])
+            self.nav_slider.set(idx)
+            self.parent.last_history_index = idx
+
+    def _prev_item(self):
+        curr = int(float(self.nav_slider.get()))
+        if curr > 0: self.nav_slider.set(curr - 1); self._on_slider_move(curr - 1)
+
+    def _next_item(self):
+        curr = int(float(self.nav_slider.get()))
+        if curr < len(self.item_ids) - 1: self.nav_slider.set(curr + 1); self._on_slider_move(curr + 1)
+
+    def _open_detail(self):
+        selected = self.tree.selection()
+        if selected:
+            val = self.tree.item(selected[0], "values")
+            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]))
 
 
 class ProgressWindow(tk.Toplevel):
     def __init__(self, parent, results_log):
         super().__init__(parent)
-        self.title("Progress Tracker")
-        self.geometry("500x350")
+        self.title("Progress Tracker & Statistics")
+        # Reduced height from 550 to 500 to remove dead space
+        self.geometry("600x500")
 
-        # English comments in the code as requested
-        # Create a canvas for the line chart
-        self.canvas = tk.Canvas(self, bg="#ffffff", width=450, height=250, relief="sunken", borderwidth=1)
-        self.canvas.pack(pady=20, padx=20)
+        # 1. Canvas for the chart
+        # Increased height slightly to use more of the top area
+        self.canvas = tk.Canvas(self, bg="#ffffff", width=500, height=260, relief="sunken", borderwidth=1)
+        self.canvas.pack(pady=(20, 10), padx=40)
 
         if not results_log:
-            self.canvas.create_text(225, 125, text="No data available yet.", fill="grey")
+            self.canvas.create_text(250, 130, text="No data available yet.", fill="grey")
             return
 
-        # Prepare cumulative data
-        scores = []
-        current_sum = 0
+        # --- Data Calculation (Same as before) ---
+        total_puzzles = len(results_log)
+        current_score = sum(r[1] for r in results_log)
+
+        max_streak = 0
+        current_streak = 0
         for _, score in results_log:
-            current_sum += score
-            scores.append(current_sum)
+            if score > 0:
+                current_streak += 1
+                max_streak = max(max_streak, current_streak)
+            else:
+                current_streak = 0
 
-        # Chart boundaries
-        padding = 30
-        w = 450 - (2 * padding)
-        h = 250 - (2 * padding)
+        avg_score = round(current_score / total_puzzles, 2) if total_puzzles > 0 else 0
+        cumulative_scores = []
+        c_sum = 0
+        for _, s in results_log:
+            c_sum += s
+            cumulative_scores.append(c_sum)
 
-        max_val = max(scores) if scores else 0
-        min_val = min(scores) if scores else 0
-        val_range = max_val - min_val if max_val != min_val else 10
+        # --- Chart Drawing Logic ---
+        padding = 40
+        w, h = 500 - (2 * padding), 260 - (2 * padding)
+        max_s, min_s = max(cumulative_scores), min(cumulative_scores)
+        val_range = max_s - min_s if max_s != min_s else 10
 
-        num_points = len(scores)
-        x_step = w / (num_points - 1) if num_points > 1 else w
+        # Axis and Grid
+        self.canvas.create_line(padding, 260 - padding, 500 - padding, 260 - padding, width=2)
+        self.canvas.create_line(padding, padding, padding, 260 - padding, width=2)
 
-        # Draw axis (simple)
-        self.canvas.create_line(padding, 250 - padding, 450 - padding, 250 - padding, fill="black")  # X-axis
-        self.canvas.create_line(padding, padding, padding, 250 - padding, fill="black")  # Y-axis
+        for i in range(5):
+            val = min_s + (i * val_range / 4)
+            y = (260 - padding) - (i * h / 4)
+            self.canvas.create_line(padding, y, 500 - padding, y, fill="#eeeeee")
+            self.canvas.create_text(padding - 10, y, text=f"{int(val)}", anchor=tk.E, font=("Arial", 8))
 
-        # Plot the line
+        x_step = w / (total_puzzles - 1) if total_puzzles > 1 else w
         points = []
-        for i, s in enumerate(scores):
+        for i, s in enumerate(cumulative_scores):
             x = padding + (i * x_step)
-            # Normalize Y and invert (Tkinter 0 is top)
-            y = (250 - padding) - ((s - min_val) / val_range * h)
+            y = (260 - padding) - ((s - min_s) / val_range * h)
             points.extend([x, y])
-
-            # Small dot for each data point
-            self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill="#2980b9", outline="#2980b9")
+            dot_color = "#3498db" if i < total_puzzles - 1 else "#e74c3c"
+            self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=dot_color, outline=dot_color)
 
         if len(points) >= 4:
-            self.canvas.create_line(points, fill="#3498db", width=2)
+            self.canvas.create_line(points, fill="#3498db", width=2, smooth=True)
 
-        tk.Label(self, text=f"Total Puzzles Done: {len(results_log)} | Final Score: {current_sum}",
-                 font=("Segoe UI", 10, "bold")).pack()
+        # --- Statistics Text Section ---
+        # Use 'fill=tk.BOTH' and 'expand=False' to tighten the layout
+        stats_frame = tk.LabelFrame(self, text=" Performance Analysis ", padx=20, pady=15)
+        stats_frame.pack(fill=tk.X, padx=40, pady=(10, 5))
 
-        # --- PUZZLE ENGINE ---
+        # Column configuration for even spacing
+        stats_frame.columnconfigure(1, weight=1)
+        stats_frame.columnconfigure(3, weight=1)
+
+        tk.Label(stats_frame, text="Total Puzzles:").grid(row=0, column=0, sticky="w", pady=2)
+        tk.Label(stats_frame, text=f"{total_puzzles}", font=("Arial", 10, "bold")).grid(row=0, column=1, padx=10,
+                                                                                        sticky="w")
+
+        tk.Label(stats_frame, text="Average Score:").grid(row=0, column=2, padx=(30, 0), sticky="w")
+        tk.Label(stats_frame, text=f"{avg_score}", font=("Arial", 10, "bold")).grid(row=0, column=3, padx=10,
+                                                                                    sticky="w")
+
+        tk.Label(stats_frame, text="Current Total:").grid(row=1, column=0, sticky="w", pady=2)
+        tk.Label(stats_frame, text=f"{current_score}", font=("Arial", 10, "bold"), fg="#2980b9").grid(row=1, column=1,
+                                                                                                      padx=10,
+                                                                                                      sticky="w")
+
+        tk.Label(stats_frame, text="Longest Streak:").grid(row=1, column=2, padx=(30, 0), sticky="w")
+        tk.Label(stats_frame, text=f"{max_streak} solved", font=("Arial", 10, "bold"), fg="#27ae60").grid(row=1,
+                                                                                                          column=3,
+                                                                                                          padx=10,
+                                                                                                          sticky="w")
+
+        # 4. Motivational Footer (Fills the remaining gap naturally)
+        footer_note = tk.Label(self, text="Keep solving to reach your next milestone!",
+                               font=("Arial", 9, "italic"), fg="#7f8c8d")
+        # anchor to bottom
+        footer_note.pack(side=tk.BOTTOM, pady=15)
 
 class PuzzleEngine:
         def __init__(self, pgn_file):
@@ -393,6 +494,8 @@ class ChessPuzzleApp(tk.Toplevel):
         self.load_puzzle()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.resizable(False, False)
+        self.last_history_index = 0
+        self.history_count_at_last_view = 0
 
     # --- CONFIG & MENU ---
 
@@ -563,19 +666,28 @@ class ChessPuzzleApp(tk.Toplevel):
         return True
 
     def _show_solution_and_continue(self, result_score=0):
-        """ result_score: 10/5/2 for solved, 0 for failed, -5 for skipped """
-        # 1. Update the log
+        """
+        result_score should be an int:
+        10 (perfect), 5/2 (partial), 0 (failed), -5 (skipped)
+        """
+        # If by any chance a string was passed, convert it to a default penalty
+        if isinstance(result_score, str):
+            result_score = -5 if result_score == "Skipped" else 0
+
+        self.refresh_board()
+
+        # Update the log with numerical data
         self.engine.results_log.append([self.engine.current_index, result_score])
 
-        # 2. Update the live counters in memory
+        # Update live counters
         self.engine.total_score += result_score
         self.engine.total_done += 1
         if result_score > 0:
             self.engine.total_solved += 1
 
-        # 3. Save the clean state (only the log)
         self.engine.save_state()
 
+        # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
         review = HistoryDetailWindow(self, p, self.piece_images, result_score)
         self.wait_window(review)
@@ -632,17 +744,18 @@ class ChessPuzzleApp(tk.Toplevel):
             self.last_move_squares = [move.from_square, move.to_square];
             self.solve_step += 1
             if self.solve_step >= len(p['solution']):
-                self.engine.total_score += {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0);
+                puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
+                self.engine.total_score += puzzle_result
                 self.engine.total_solved += 1
-                messagebox.showinfo("Correct", "Solved!");
-                self._show_solution_and_continue("Solved")
+                messagebox.showinfo("Correct", "Solved!")
+                self._show_solution_and_continue(puzzle_result)
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
         else:
             self.attempts_left -= 1;
             self.btn_hint.pack(side=tk.LEFT, padx=5)
             if self.attempts_left <= 0:
-                messagebox.showerror("Failed", "Out of attempts."); self._show_solution_and_continue("Failed")
+                messagebox.showerror("Failed", "Out of attempts."); self._show_solution_and_continue(0)
             else:
                 self.update_status_display()
 
@@ -659,7 +772,7 @@ class ChessPuzzleApp(tk.Toplevel):
     def _skip(self):
         if self.board and messagebox.askyesno("Skip", "View solution? (-5 pts)"):
             self.engine.total_score -= 5;
-            self._show_solution_and_continue("Skipped")
+            self._show_solution_and_continue(-5)
 
     def update_status_display(self):
         status_text = (f"Score: {self.engine.total_score} | "
