@@ -263,13 +263,27 @@ class ChessPuzzleApp(tk.Toplevel):
         super().__init__()
         self.title("Chess Puzzle Manager")
 
-        # 1. Config loading (AttributeError fix)
+        # 1. Load configuration first (to access recent files)
         self.config_data = self._load_config()
 
-        # 2. Engine Initialization
+        # 2. Determine which file to load
+        target_file = None
+
+        # Priority 1: Command line argument
         if pgn_file and os.path.exists(pgn_file):
-            self.engine = PuzzleEngine(pgn_file)
-            self._add_to_recent(pgn_file)
+            target_file = pgn_file
+        # Priority 2: Check recent files list for the first valid file
+        else:
+            recent_list = self.config_data.get("recent_files", [])
+            for path in recent_list:
+                if os.path.exists(path):
+                    target_file = path
+                    break  # Found the most recent valid file
+
+        # 3. Initialize Engine or Fallback
+        if target_file:
+            self.engine = PuzzleEngine(target_file)
+            self._add_to_recent(target_file)
         else:
             self.engine = self._create_fallback_engine()
 
