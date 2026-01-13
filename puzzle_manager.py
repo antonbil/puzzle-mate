@@ -196,126 +196,155 @@ class HistoryWindow(tk.Toplevel):
         score = int(self.tree.item(item, "values")[2])
         HistoryDetailWindow(self, self.puzzles[idx], self.piece_images, score)
 
+
 class ProgressWindow(tk.Toplevel):
     def __init__(self, parent, results_log):
         super().__init__(parent)
         self.title("Progress Tracker")
-        self.geometry("400x300")
+        self.geometry("500x350")
 
-        canvas = tk.Canvas(self, bg="white", width=350, height=200)
-        canvas.pack(pady=20, padx=20)
+        # English comments in the code as requested
+        # Create a canvas for the line chart
+        self.canvas = tk.Canvas(self, bg="#ffffff", width=450, height=250, relief="sunken", borderwidth=1)
+        self.canvas.pack(pady=20, padx=20)
 
         if not results_log:
-            canvas.create_text(175, 100, text="No data yet")
+            self.canvas.create_text(225, 125, text="No data available yet.", fill="grey")
             return
 
-        # Calculate cumulative scores for the line chart
+        # Prepare cumulative data
         scores = []
-        current = 0
-        for _, s in results_log:
-            current += s
-            scores.append(current)
+        current_sum = 0
+        for _, score in results_log:
+            current_sum += score
+            scores.append(current_sum)
 
-        # Scaling logic
-        max_s = max(scores) if scores else 1
-        min_s = min(scores) if scores else 0
-        range_s = max_s - min_s if max_s != min_s else 1
+        # Chart boundaries
+        padding = 30
+        w = 450 - (2 * padding)
+        h = 250 - (2 * padding)
 
-        width = 350
-        height = 200
-        dx = width / len(scores)
+        max_val = max(scores) if scores else 0
+        min_val = min(scores) if scores else 0
+        val_range = max_val - min_val if max_val != min_val else 10
 
+        num_points = len(scores)
+        x_step = w / (num_points - 1) if num_points > 1 else w
+
+        # Draw axis (simple)
+        self.canvas.create_line(padding, 250 - padding, 450 - padding, 250 - padding, fill="black")  # X-axis
+        self.canvas.create_line(padding, padding, padding, 250 - padding, fill="black")  # Y-axis
+
+        # Plot the line
         points = []
         for i, s in enumerate(scores):
-            x = i * dx
-            # Normalize y: flip because canvas 0,0 is top-left
-            y = height - ((s - min_s) / range_s * height)
+            x = padding + (i * x_step)
+            # Normalize Y and invert (Tkinter 0 is top)
+            y = (250 - padding) - ((s - min_val) / val_range * h)
             points.extend([x, y])
 
-        if len(points) > 2:
-            canvas.create_line(points, fill="blue", width=2, smooth=True)
+            # Small dot for each data point
+            self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill="#2980b9", outline="#2980b9")
 
-        tk.Label(self, text=f"Current Total Score: {current}", font=("Arial", 10, "bold")).pack()
-# --- PUZZLE ENGINE ---
+        if len(points) >= 4:
+            self.canvas.create_line(points, fill="#3498db", width=2)
+
+        tk.Label(self, text=f"Total Puzzles Done: {len(results_log)} | Final Score: {current_sum}",
+                 font=("Segoe UI", 10, "bold")).pack()
+
+        # --- PUZZLE ENGINE ---
 
 class PuzzleEngine:
-    def __init__(self, pgn_file):
-        base_name = os.path.splitext(pgn_file)[0]
-        self.save_file = f"{base_name}_results.json"
+        def __init__(self, pgn_file):
+            base_name = os.path.splitext(pgn_file)[0]
+            self.save_file = f"{base_name}_results.json"
 
-        self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
+            # Load puzzles from PGN
+            self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
 
-        # Load the new structure
-        state = self._load_state()
-        self.results_log = state.get("results_log", [])  # List of [index, score]
+            # Load only the results log
+            self.results_log = self._load_results()
 
-        # Derived properties (calculated on the fly)
-        self.total_score = sum(r[1] for r in self.results_log)
-        self.total_done = len(self.results_log)
-        self.total_solved = len([r for r in self.results_log if r[1] > 0])
+            # Calculate totals on the fly for the UI
+            self.total_score = sum(r[1] for r in self.results_log)
+            self.total_done = len(self.results_log)
+            self.total_solved = len([r for r in self.results_log if r[1] > 0])
 
-        self.current_index = -1
+            self.current_index = -1
 
-    def _load_puzzles(self, filename):
-        """ Reads PGN and extracts puzzle data including Lichess Site URL. """
-        p_list = []
-        try:
-            with open(filename) as f:
-                while True:
-                    game = chess.pgn.read_game(f)
-                    if game is None: break
-                    moves = list(game.mainline_moves())
-                    w = game.headers.get("White", "").strip()
-                    b = game.headers.get("Black", "").strip()
+        def _load_results(self):
+            """ Loads only the results_log from the JSON file. """
+            if os.path.exists(self.save_file):
+                try:
+                    with open(self.save_file, 'r') as f:
+                        data = json.load(f)
+                        # Support both old format and new list format during transition
+                        return data.get("results_log", [])
+                except:
+                    pass
+            return []
 
-                    # Distinguish between training format (one mistake first) and normal PGN
-                    is_training = "wins" in w.lower() or "wins" in b.lower()
+        def save_state(self):
+            """ The only state we need to save is the log of results. """
+            with open(self.save_file, 'w') as f:
+                json.dump({"results_log": self.results_log}, f)
 
-                    if is_training:
-                        initial_move = moves[0] if moves else None
-                        solution = moves[1:] if moves else []
-                        display_name = ""
-                    else:
-                        initial_move = None
-                        solution = moves
-                        names = [n for n in [w, b] if n and n != "?"]
-                        display_name = " - ".join(names) if len(names) > 1 else (names[0] if names else "")
+        def reset_history(self):
+            """ Clears all results and resets the save file. """
+            self.results_log = []
+            self.total_score = 0
+            self.total_done = 0
+            self.total_solved = 0
+            self.save_state()  # Overwrites the file with empty log
 
-                    p_list.append({
-                        'fen': game.headers.get("FEN"),
-                        'initial_move': initial_move,
-                        'solution': solution,
-                        'display_name': display_name,
-                        'date': game.headers.get("Date", ""),
-                        'event': game.headers.get("Event", "Chess Puzzle"),
-                        'site': game.headers.get("Site", ""),  # Link to Lichess
-                        'rating': game.headers.get("Rating", "N/A"),
-                        'themes': game.headers.get("Themes", "")
-                    })
-        except Exception as e:
-            print(f"PGN Error: {e}")
-        return p_list
-
-    def _load_state(self):
-        if os.path.exists(self.save_file):
+        def _load_puzzles(self, filename):
+            """ Reads PGN and extracts puzzle data including Lichess Site URL. """
+            p_list = []
             try:
-                with open(self.save_file, 'r') as f:
-                    return json.load(f)
-            except: pass
-        return {"results_log": []}
+                with open(filename) as f:
+                    while True:
+                        game = chess.pgn.read_game(f)
+                        if game is None: break
+                        moves = list(game.mainline_moves())
+                        w = game.headers.get("White", "").strip()
+                        b = game.headers.get("Black", "").strip()
 
-    def save_state(self):
-        with open(self.save_file, 'w') as f:
-            json.dump({"results_log": self.results_log}, f)
+                        # Distinguish between training format (one mistake first) and normal PGN
+                        is_training = "wins" in w.lower() or "wins" in b.lower()
 
-    def get_next_random_puzzle(self):
-        # Exclude puzzles already present in the results_log
-        played_indices = {r[0] for r in self.results_log}
-        remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
+                        if is_training:
+                            initial_move = moves[0] if moves else None
+                            solution = moves[1:] if moves else []
+                            display_name = ""
+                        else:
+                            initial_move = None
+                            solution = moves
+                            names = [n for n in [w, b] if n and n != "?"]
+                            display_name = " - ".join(names) if len(names) > 1 else (names[0] if names else "")
 
-        if not remaining: return None
-        self.current_index = random.choice(remaining)
-        return self.puzzles[self.current_index]
+                        p_list.append({
+                            'fen': game.headers.get("FEN"),
+                            'initial_move': initial_move,
+                            'solution': solution,
+                            'display_name': display_name,
+                            'date': game.headers.get("Date", ""),
+                            'event': game.headers.get("Event", "Chess Puzzle"),
+                            'site': game.headers.get("Site", ""),  # Link to Lichess
+                            'rating': game.headers.get("Rating", "N/A"),
+                            'themes': game.headers.get("Themes", "")
+                        })
+            except Exception as e:
+                print(f"PGN Error: {e}")
+            return p_list
+
+        def get_next_random_puzzle(self):
+            # Exclude puzzles already present in the results_log
+            played_indices = {r[0] for r in self.results_log}
+            remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
+
+            if not remaining: return None
+            self.current_index = random.choice(remaining)
+            return self.puzzles[self.current_index]
 
 
 # --- MAIN APP ---
@@ -410,6 +439,9 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label="History", command=lambda: HistoryWindow(self, self.engine, self.piece_images))
         view_menu.add_command(label="Show Progress", command=lambda: ProgressWindow(self, self.engine.results_log))
 
+        view_menu.add_separator()
+        view_menu.add_command(label="Reset Progress...", command=self._confirm_reset)
+
     def _setup_ui(self):
         header = tk.Frame(self, pady=10, bg="#f7f7f7")
         header.pack(fill=tk.X)
@@ -472,6 +504,19 @@ class ChessPuzzleApp(tk.Toplevel):
                 img = self.piece_images.get(pc.symbol())
                 if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW)
 
+    def _confirm_reset(self):
+        """ Asks for confirmation and resets the engine state. """
+        filename = os.path.basename(self.engine.save_file).replace("_results.json", ".pgn")
+        msg = f"Are you sure you want to reset all progress for '{filename}'?"
+
+        if messagebox.askyesno("Reset Progress", msg):
+            self.engine.reset_history()
+            self.update_status_display()
+            self.refresh_board()
+            messagebox.showinfo("Reset", "Progress has been cleared.")
+            # Optional: reload the first puzzle to start fresh
+            self.load_puzzle()
+
     # --- CORE LOGIC ---
 
     def load_puzzle(self):
@@ -519,17 +564,16 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _show_solution_and_continue(self, result_score=0):
         """ result_score: 10/5/2 for solved, 0 for failed, -5 for skipped """
-        self.refresh_board()
-
-        # Append to the log: [index, score]
+        # 1. Update the log
         self.engine.results_log.append([self.engine.current_index, result_score])
 
-        # Update running totals for the UI
+        # 2. Update the live counters in memory
         self.engine.total_score += result_score
         self.engine.total_done += 1
         if result_score > 0:
             self.engine.total_solved += 1
 
+        # 3. Save the clean state (only the log)
         self.engine.save_state()
 
         p = self.engine.puzzles[self.engine.current_index]
