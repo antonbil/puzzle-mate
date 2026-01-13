@@ -8,7 +8,6 @@ import os
 import json
 import random
 import argparse
-import webbrowser  # Required for Lichess integration
 from PIL import Image, ImageTk
 
 
@@ -263,7 +262,6 @@ class ChessPuzzleApp(tk.Toplevel):
     def __init__(self, pgn_file=None):
         super().__init__()
         self.title("Chess Puzzle Manager")
-        self.geometry("550x780")
 
         # 1. Config loading (AttributeError fix)
         self.config_data = self._load_config()
@@ -289,6 +287,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         self.load_puzzle()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.resizable(False, False)
 
     # --- CONFIG & MENU ---
 
@@ -361,10 +360,6 @@ class ChessPuzzleApp(tk.Toplevel):
         self.btn_hint.pack(side=tk.LEFT, padx=5)
         self.btn_hint.pack_forget()
 
-        self.btn_analyze = ttk.Button(self.btn_container, text="Analyze on Lichess", command=self._analyze_on_lichess)
-        self.btn_analyze.pack(side=tk.LEFT, padx=5)
-        self.btn_analyze.pack_forget()
-
         ttk.Button(self.btn_container, text="Skip (-5 pts)", command=self._skip).pack(side=tk.LEFT, padx=5)
 
     # --- BOARD RENDERING ---
@@ -408,16 +403,16 @@ class ChessPuzzleApp(tk.Toplevel):
             messagebox.showinfo("Done", "All puzzles finished!")
             self.lbl_event.config(text="No puzzles active")
             self.lbl_sub.config(text="Please load a PGN file via File -> Load")
-            self.lbl_turn.config(text="");
+            self.lbl_turn.config(text="")
             self.lbl_attempts.config(text="")
-            self.btn_hint.pack_forget();
-            self.btn_analyze.pack_forget()
-            self.board = None;
+            self.btn_hint.pack_forget()
+
+            self.board = None
             self.refresh_board()
             return False
 
         self.board = chess.Board(puzzle['fen'])
-        self.solve_step = 0;
+        self.solve_step = 0
         self.attempts_left = 3
         self.selected_square = self.hint_square = None
 
@@ -432,12 +427,6 @@ class ChessPuzzleApp(tk.Toplevel):
             f"[{puzzle['date']}]")
         self.lbl_sub.config(text=" | ".join(sub_info))
 
-        # Lichess Button Logic
-        if puzzle.get('site'):
-            self.btn_analyze.pack(side=tk.LEFT, padx=5)
-        else:
-            self.btn_analyze.pack_forget()
-
         if puzzle['initial_move']:
             self.board.push(puzzle['initial_move'])
             self.last_move_squares = [puzzle['initial_move'].from_square, puzzle['initial_move'].to_square]
@@ -450,10 +439,6 @@ class ChessPuzzleApp(tk.Toplevel):
         self.update_status_display();
         self.refresh_board()
         return True
-
-    def _analyze_on_lichess(self):
-        url = self.engine.puzzles[self.engine.current_index].get('site')
-        if url: webbrowser.open(url)
 
     def _show_solution_and_continue(self, status="Failed"):
         self.refresh_board()

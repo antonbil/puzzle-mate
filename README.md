@@ -17,10 +17,10 @@ A robust Python application for training chess puzzles from your own PGN databas
    git clone [https://github.com/YOUR-USERNAME/chess-tactics-master.git](https://github.com/YOUR-USERNAME/chess-tactics-master.git)
    cd chess-tactics-master
    ```
-2. **Install dependencies**: This app requires python-chess and Pillow.
+2. **Install dependencies**: This app requires python-chess and tkinter (among others).
 
 ```bash
-pip install python-chess Pillow
+pip install python-chess tkinter
 ```
 Resources: Ensure a folder named Images/ is present containing the chess piece icons (e.g., wP.png, bR.png, etc.).
 
