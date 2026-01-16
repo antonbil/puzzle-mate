@@ -9,7 +9,197 @@ import json
 import random
 import argparse
 from PIL import Image, ImageTk
+# --- TRANSLATIONS ---
 
+TRANSLATIONS = {
+    "en": {
+        "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
+        "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
+        "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
+        "black_turn": "BLACK TO MOVE", "no_puzzles": "No puzzles active",
+        "load_pgn_msg": "Please load a PGN file via File -> Load",
+        "file": "File", "view": "View", "history": "History", "progress": "Show Progress",
+        "language": "Language", "dutch": "Nederlands", "english": "English", "reset": "Reset Progress...",
+        "all_finished": "All puzzles finished!", "confirm_skip": "View solution? (-5 pts)",
+        "reset_title": "Reset Progress", "reset_msg": "Are you sure you want to reset all progress for '{}'?",
+        "perfect": "Perfect", "partial": "Solved", "failed_status": "Failed", "skipped": "Skipped",
+        "review": "Review", "performance": "Performance Analysis", "total_puzzles": "Total Puzzles:",
+        "avg_score": "Average Score:", "current_total": "Current Total:", "streak": "Longest Streak:",
+        "exit": "Exit", "open_recent": "Open Recent", "load_pgn":"Load PGN...","progress_cleared":"Progress has been cleared.",
+        "no_data_msg": "No data available yet.",
+        "footer_msg": "Keep solving to reach your next milestone!", "chess_puzzle_manager":"Chess Puzzle Manager",
+        "themes":"themes","puzzle_name":"Puzzle Name","status":"Status"
+    },
+    "nl": {
+        "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
+        "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
+        "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
+        "black_turn": "ZWART AAN ZET", "no_puzzles": "Geen puzzels actief",
+        "load_pgn_msg": "Laad een PGN bestand via Bestand -> Laden",
+        "file": "Bestand", "view": "Beeld", "history": "Geschiedenis", "progress": "Voortgang",
+        "language": "Taal", "dutch": "Nederlands", "english": "English", "reset": "Voortgang wissen...",
+        "all_finished": "Alle puzzels voltooid!", "confirm_skip": "Oplossing bekijken? (-5 pnt)",
+        "reset_title": "Voortgang Wissen", "reset_msg": "Weet u zeker dat u de voortgang voor '{}' wilt wissen?",
+        "perfect": "Perfect", "partial": "Opgelost", "failed_status": "Gefaald", "skipped": "Overgeslagen",
+        "review": "Inspectie", "performance": "Prestatie Analyse", "total_puzzles": "Totaal Puzzels:",
+        "avg_score": "Gem. Score:", "current_total": "Totaal Score:", "streak": "Langste Reeks:",
+        "exit": "Afsluiten", "open_recent": "Recent geopend", "load_pgn":"Laad PGN...", "progress_cleared":"Voortgang verwijderd.",
+        "no_data_msg": "Nog geen gegevens beschikbaar.",
+        "footer_msg": "Blijf puzzelen om je volgende mijlpaal te bereiken!", "chess_puzzle_manager":"Schaak Puzzel Manager",
+        "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status"
+    },
+    "de": {
+        "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
+        "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
+        "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
+        "black_turn": "SCHWARZ AM ZUG", "no_puzzles": "Keine Rätsel aktiv",
+        "load_pgn_msg": "Bitte laden Sie eine PGN-Datei über Datei -> Laden",
+        "file": "Datei", "view": "Ansicht", "history": "Verlauf", "progress": "Fortschritt",
+        "language": "Sprache", "dutch": "Nederlands", "english": "English", "reset": "Fortschritt zurücksetzen...",
+        "all_finished": "Alle Rätsel abgeschlossen!", "confirm_skip": "Lösung anzeigen? (-5 Pkt)",
+        "reset_title": "Fortschritt zurücksetzen", "reset_msg": "Sind Sie sicher, dass Sie den Fortschritt für '{}' löschen wollen?",
+        "perfect": "Perfekt", "partial": "Gelöst", "failed_status": "Fehlgeschlagen", "skipped": "Übersprungen",
+        "review": "Überprüfung", "performance": "Leistungsanalyse", "total_puzzles": "Rätsel insgesamt:",
+        "avg_score": "Durchschn. Punkte:", "current_total": "Gesamtpunktzahl:", "streak": "Längste Serie:",
+        "exit": "Beenden", "open_recent": "Zuletzt geöffnet", "load_pgn":"PGN laden...", "progress_cleared":"Fortschritt wurde gelöscht.",
+        "no_data_msg": "Noch keine Daten verfügbar.",
+        "footer_msg": "Löse weiter, um dein nächstes Ziel zu erreichen!", "chess_puzzle_manager":"Schach-Rätsel-Manager",
+        "themes":"Themen","puzzle_name":"Rätselname","status":"Status"
+    },
+    "fr": {
+        "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
+        "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
+        "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
+        "black_turn": "LES NOIRS JOUENT", "no_puzzles": "Aucun puzzle actif",
+        "load_pgn_msg": "Veuillez charger un fichier PGN via Fichier -> Charger",
+        "file": "Fichier", "view": "Affichage", "history": "Historique", "progress": "Progression",
+        "language": "Langue", "dutch": "Nederlands", "english": "English", "reset": "Réinitialiser la progression...",
+        "all_finished": "Tous les puzzles sont terminés !", "confirm_skip": "Voir la solution ? (-5 pts)",
+        "reset_title": "Réinitialiser la progression", "reset_msg": "Voulez-vous vraiment réinitialiser la progression pour '{}' ?",
+        "perfect": "Parfait", "partial": "Résolu", "failed_status": "Échoué", "skipped": "Passé",
+        "review": "Examen", "performance": "Analyse de performance", "total_puzzles": "Total des puzzles :",
+        "avg_score": "Score moyen :", "current_total": "Total actuel :", "streak": "Plus longue série :",
+        "exit": "Quitter", "open_recent": "Ouvrir récents", "load_pgn":"Charger PGN...", "progress_cleared":"La progression a été effacée.",
+        "no_data_msg": "Aucune donnée disponible pour le moment.",
+        "footer_msg": "Continuez à résoudre pour atteindre votre prochain objectif !", "chess_puzzle_manager":"Gestionnaire de Puzzles d'Échecs",
+        "themes":"thèmes","puzzle_name":"Nom du Puzzle","status":"Statut"
+    },
+    "es": {
+        "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
+        "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
+        "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
+        "black_turn": "JUEGAN NEGRAS", "no_puzzles": "No hay acertijos activos",
+        "load_pgn_msg": "Cargue un archivo PGN a través de Archivo -> Cargar",
+        "file": "Archivo", "view": "Ver", "history": "Historial", "progress": "Progreso",
+        "language": "Idioma", "dutch": "Nederlands", "english": "English", "reset": "Reiniciar progreso...",
+        "all_finished": "¡Todos los acertijos terminados!", "confirm_skip": "¿Ver solución? (-5 pts)",
+        "reset_title": "Reiniciar progreso", "reset_msg": "¿Está seguro de que desea borrar el progreso de '{}'?",
+        "perfect": "Perfecto", "partial": "Resuelto", "failed_status": "Fallido", "skipped": "Saltado",
+        "review": "Revisión", "performance": "Análisis de rendimiento", "total_puzzles": "Total de acertijos:",
+        "avg_score": "Puntuación media:", "current_total": "Total actual:", "streak": "Racha más larga:",
+        "exit": "Salir", "open_recent": "Abrir recientes", "load_pgn":"Cargar PGN...", "progress_cleared":"Se ha borrado el progreso.",
+        "no_data_msg": "Aún no hay datos disponibles.",
+        "footer_msg": "¡Sigue resolviendo para alcanzar tu próximo hito!", "chess_puzzle_manager":"Gestor de Puzzles de Ajedrez",
+        "themes":"temas","puzzle_name":"Nombre del Puzzle","status":"Estado"
+    }
+}
+
+# --- ENGINE ---
+
+class PuzzleEngine:
+    def __init__(self, pgn_file):
+        base_name = os.path.splitext(pgn_file)[0]
+        self.save_file = f"{base_name}_results.json"
+
+        # Load only the results log
+        self.results_log = self._load_results()
+        # Load puzzles from PGN
+
+        self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
+
+        # Calculate totals on the fly for the UI
+        self.total_score = sum(r[1] for r in self.results_log)
+        self.total_done = len(self.results_log)
+        self.total_solved = len([r for r in self.results_log if r[1] > 0])
+
+        self.current_index = -1
+
+    def _load_results(self):
+        """ Loads only the results_log from the JSON file. """
+        if os.path.exists(self.save_file):
+            try:
+                with open(self.save_file, 'r') as f:
+                    data = json.load(f)
+                    # Support both old format and new list format during transition
+                    return data.get("results_log", [])
+            except:
+                return []
+        return []
+
+    def save_state(self):
+        """ The only state we need to save is the log of results. """
+        with open(self.save_file, 'w') as f:
+            json.dump({"results_log": self.results_log}, f)
+
+    def reset_history(self):
+        """ Clears all results and resets the save file. """
+        self.results_log = []
+        self.total_score = 0
+        self.total_done = 0
+        self.total_solved = 0
+        self.save_state()  # Overwrites the file with empty log
+
+    def _load_puzzles(self, filename):
+        """ Reads PGN and extracts puzzle data including Lichess Site URL. """
+        p_list = []
+        try:
+            with open(filename) as f:
+                while True:
+                    game = chess.pgn.read_game(f)
+                    if game is None: break
+                    moves = list(game.mainline_moves())
+                    w = game.headers.get("White", "").strip()
+                    b = game.headers.get("Black", "").strip()
+
+                    # Distinguish between training format (one mistake first) and normal PGN
+                    is_training = "wins" in w.lower() or "wins" in b.lower()
+
+                    if is_training:
+                        initial_move = moves[0] if moves else None
+                        solution = moves[1:] if moves else []
+                        display_name = ""
+                    else:
+                        initial_move = None
+                        solution = moves
+                        names = [n for n in [w, b] if n and n != "?"]
+                        display_name = " - ".join(names) if len(names) > 1 else (names[0] if names else "")
+
+                    p_list.append({
+                        'fen': game.headers.get("FEN"),
+                        'initial_move': initial_move,
+                        'solution': solution,
+                        'display_name': display_name,
+                        'date': game.headers.get("Date", ""),
+                        'event': game.headers.get("Event", "Chess Puzzle"),
+                        'site': game.headers.get("Site", ""),  # Link to Lichess
+                        'rating': game.headers.get("Rating", "N/A"),
+                        'themes': game.headers.get("Themes", "")
+                    })
+        except Exception as e:
+            print(f"PGN Error: {e}")
+        return p_list
+
+    def get_next_random_puzzle(self):
+        # Exclude puzzles already present in the results_log
+        played_indices = {r[0] for r in self.results_log}
+        remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
+
+        if not remaining: return None
+        self.current_index = random.choice(remaining)
+        return self.puzzles[self.current_index]
+
+
+# --- CUSTOM WIDGETS ---
 
 # --- HISTORY DETAIL WINDOW ---
 
@@ -18,10 +208,11 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def __init__(self, parent, puzzle, original_images, score=None):
         super().__init__(parent)
-        self.title(f"Review: {puzzle['event']}")
+        self.lang, self.t = lang, lambda k: TRANSLATIONS[lang].get(k, k)
+        self.title(f"{self.t('review')} {puzzle['event']}")
         # Header with score
-        score_text = f" (Score: {score})" if score is not None else ""
-        tk.Label(self, text=f"Review: {puzzle['display_name']}{score_text}",
+        score_text = f" ({self.t('score')}: {score})" if score is not None else ""
+        tk.Label(self, text=f"{self.t('review')} {puzzle['display_name']}{score_text}",
                  font=("Arial", 12, "bold")).pack(pady=5)
         self.puzzle = puzzle
 
@@ -147,7 +338,7 @@ class HistoryWindow(tk.Toplevel):
     def __init__(self, parent, engine, piece_images):
         super().__init__(parent)
         self.parent = parent
-        self.title("Puzzle History")
+        self.title(self.parent.t("history"))
         self.geometry("600x600")  # Slightly wider for larger fonts
 
         self.results_log = engine.results_log
@@ -165,14 +356,14 @@ class HistoryWindow(tk.Toplevel):
                              font=('Arial', 12, 'bold'))
 
         # 1. List section setup using the Touch style
-        columns = ("#", "Puzzle Name", "Score", "Status")
+        columns = ("#", self.parent.t("puzzle_name"), self.parent.t("score"), self.parent.t("status"))
         self.tree = ttk.Treeview(self, columns=columns, show="headings",
                                  selectmode="browse", style="Touch.Treeview")
 
         for col in columns:
             self.tree.heading(col, text=col)
             # Adjust column widths for larger text
-            width = 60 if col == "#" else 100 if col in ["Score", "Status"] else 250
+            width = 60 if col == "#" else 100 if col in [self.parent.t("score"), self.parent.t("status")] else 250
             self.tree.column(col, width=width)
 
         # Result coloring (remains same)
@@ -264,7 +455,8 @@ class HistoryWindow(tk.Toplevel):
 class ProgressWindow(tk.Toplevel):
     def __init__(self, parent, results_log):
         super().__init__(parent)
-        self.title("Progress Tracker & Statistics")
+        self.parent = parent
+        self.title(self.parent.t("progress"))
         # Reduced height from 550 to 500 to remove dead space
         self.geometry("600x500")
 
@@ -274,7 +466,7 @@ class ProgressWindow(tk.Toplevel):
         self.canvas.pack(pady=(20, 10), padx=40)
 
         if not results_log:
-            self.canvas.create_text(250, 130, text="No data available yet.", fill="grey")
+            self.canvas.create_text(250, 130, text=self.parent.t("no_data_msg"), fill="grey")
             return
 
         # --- Data Calculation (Same as before) ---
@@ -327,141 +519,49 @@ class ProgressWindow(tk.Toplevel):
 
         # --- Statistics Text Section ---
         # Use 'fill=tk.BOTH' and 'expand=False' to tighten the layout
-        stats_frame = tk.LabelFrame(self, text=" Performance Analysis ", padx=20, pady=15)
+        stats_frame = tk.LabelFrame(self, text=f" {self.parent.t('performance')} ", padx=20, pady=15)
         stats_frame.pack(fill=tk.X, padx=40, pady=(10, 5))
 
         # Column configuration for even spacing
         stats_frame.columnconfigure(1, weight=1)
         stats_frame.columnconfigure(3, weight=1)
 
-        tk.Label(stats_frame, text="Total Puzzles:").grid(row=0, column=0, sticky="w", pady=2)
+        tk.Label(stats_frame, text=self.parent.t("total_puzzles")).grid(row=0, column=0, sticky="w", pady=2)
         tk.Label(stats_frame, text=f"{total_puzzles}", font=("Arial", 10, "bold")).grid(row=0, column=1, padx=10,
                                                                                         sticky="w")
 
-        tk.Label(stats_frame, text="Average Score:").grid(row=0, column=2, padx=(30, 0), sticky="w")
+        tk.Label(stats_frame, text=f"{self.parent.t('avg_score')}:").grid(row=0, column=2, padx=(30, 0), sticky="w")
         tk.Label(stats_frame, text=f"{avg_score}", font=("Arial", 10, "bold")).grid(row=0, column=3, padx=10,
                                                                                     sticky="w")
 
-        tk.Label(stats_frame, text="Current Total:").grid(row=1, column=0, sticky="w", pady=2)
+        tk.Label(stats_frame, text=f"{self.parent.t('current_total')}:").grid(row=1, column=0, sticky="w", pady=2)
         tk.Label(stats_frame, text=f"{current_score}", font=("Arial", 10, "bold"), fg="#2980b9").grid(row=1, column=1,
                                                                                                       padx=10,
                                                                                                       sticky="w")
 
-        tk.Label(stats_frame, text="Longest Streak:").grid(row=1, column=2, padx=(30, 0), sticky="w")
-        tk.Label(stats_frame, text=f"{max_streak} solved", font=("Arial", 10, "bold"), fg="#27ae60").grid(row=1,
+        tk.Label(stats_frame, text=f"{self.parent.t('streak')}:").grid(row=1, column=2, padx=(30, 0), sticky="w")
+        tk.Label(stats_frame, text=f"{max_streak} {self.parent.t('solved')}", font=("Arial", 10, "bold"), fg="#27ae60").grid(row=1,
                                                                                                           column=3,
                                                                                                           padx=10,
                                                                                                           sticky="w")
 
         # 4. Motivational Footer (Fills the remaining gap naturally)
-        footer_note = tk.Label(self, text="Keep solving to reach your next milestone!",
+        footer_note = tk.Label(self, text=self.parent.t("footer_msg"),
                                font=("Arial", 9, "italic"), fg="#7f8c8d")
         # anchor to bottom
         footer_note.pack(side=tk.BOTTOM, pady=15)
-
-class PuzzleEngine:
-        def __init__(self, pgn_file):
-            base_name = os.path.splitext(pgn_file)[0]
-            self.save_file = f"{base_name}_results.json"
-
-            # Load only the results log
-            self.results_log = self._load_results()
-            # Load puzzles from PGN
-
-            self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
-
-            # Calculate totals on the fly for the UI
-            self.total_score = sum(r[1] for r in self.results_log)
-            self.total_done = len(self.results_log)
-            self.total_solved = len([r for r in self.results_log if r[1] > 0])
-
-            self.current_index = -1
-
-        def _load_results(self):
-            """ Loads only the results_log from the JSON file. """
-            if os.path.exists(self.save_file):
-                try:
-                    with open(self.save_file, 'r') as f:
-                        data = json.load(f)
-                        # Support both old format and new list format during transition
-                        return data.get("results_log", [])
-                except:
-                    return []
-            return []
-
-        def save_state(self):
-            """ The only state we need to save is the log of results. """
-            with open(self.save_file, 'w') as f:
-                json.dump({"results_log": self.results_log}, f)
-
-        def reset_history(self):
-            """ Clears all results and resets the save file. """
-            self.results_log = []
-            self.total_score = 0
-            self.total_done = 0
-            self.total_solved = 0
-            self.save_state()  # Overwrites the file with empty log
-
-        def _load_puzzles(self, filename):
-            """ Reads PGN and extracts puzzle data including Lichess Site URL. """
-            p_list = []
-            try:
-                with open(filename) as f:
-                    while True:
-                        game = chess.pgn.read_game(f)
-                        if game is None: break
-                        moves = list(game.mainline_moves())
-                        w = game.headers.get("White", "").strip()
-                        b = game.headers.get("Black", "").strip()
-
-                        # Distinguish between training format (one mistake first) and normal PGN
-                        is_training = "wins" in w.lower() or "wins" in b.lower()
-
-                        if is_training:
-                            initial_move = moves[0] if moves else None
-                            solution = moves[1:] if moves else []
-                            display_name = ""
-                        else:
-                            initial_move = None
-                            solution = moves
-                            names = [n for n in [w, b] if n and n != "?"]
-                            display_name = " - ".join(names) if len(names) > 1 else (names[0] if names else "")
-
-                        p_list.append({
-                            'fen': game.headers.get("FEN"),
-                            'initial_move': initial_move,
-                            'solution': solution,
-                            'display_name': display_name,
-                            'date': game.headers.get("Date", ""),
-                            'event': game.headers.get("Event", "Chess Puzzle"),
-                            'site': game.headers.get("Site", ""),  # Link to Lichess
-                            'rating': game.headers.get("Rating", "N/A"),
-                            'themes': game.headers.get("Themes", "")
-                        })
-            except Exception as e:
-                print(f"PGN Error: {e}")
-            return p_list
-
-        def get_next_random_puzzle(self):
-            # Exclude puzzles already present in the results_log
-            played_indices = {r[0] for r in self.results_log}
-            remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
-
-            if not remaining: return None
-            self.current_index = random.choice(remaining)
-            return self.puzzles[self.current_index]
-
 
 # --- MAIN APP ---
 
 class ChessPuzzleApp(tk.Toplevel):
     def __init__(self, pgn_file=None):
         super().__init__()
-        self.title("Chess Puzzle Manager")
 
         # 1. Load configuration first (to access recent files)
         self.config_data = self._load_config()
-
+        self.lang = self.config_data.get("language", "en")
+        self.t = lambda k: TRANSLATIONS[self.lang].get(k, k)
+        self.title(self.t("chess_puzzle_manager"))
         # 2. Determine which file to load
         target_file = None
 
@@ -529,25 +629,34 @@ class ChessPuzzleApp(tk.Toplevel):
         self.config(menu=self.menubar)
 
         file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Load PGN...", command=self._menu_load_pgn)
+        self.menubar.add_cascade(label=self.t("file"), menu=file_menu)
+        file_menu.add_command(label=self.t("load_pgn"), command=self._menu_load_pgn)
 
         recent_menu = tk.Menu(file_menu, tearoff=0)
-        file_menu.add_cascade(label="Open Recent", menu=recent_menu)
+        file_menu.add_cascade(label=self.t("open_recent"), menu=recent_menu)
         for path in self.config_data.get("recent_files", []):
             label = os.path.basename(path)
             recent_menu.add_command(label=label, command=lambda p=path: self._load_specific_pgn(p))
 
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self._on_close)
+        file_menu.add_command(label=self.t("exit"), command=self._on_close)
+
+        # Language Menu
+        l_m = tk.Menu(self.menubar, tearoff=0);
+        self.menubar.add_cascade(label=self.t("language"), menu=l_m)
+        l_m.add_command(label="English", command=lambda: self._set_lang("en"))
+        l_m.add_command(label="Nederlands", command=lambda: self._set_lang("nl"))
+        l_m.add_command(label="Deutsch", command=lambda: self._set_lang("de"))
+        l_m.add_command(label="Français", command=lambda: self._set_lang("fr"))
+        l_m.add_command(label="Español", command=lambda: self._set_lang("es"))
 
         view_menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="View", menu=view_menu)
-        view_menu.add_command(label="History", command=lambda: HistoryWindow(self, self.engine, self.piece_images))
-        view_menu.add_command(label="Show Progress", command=lambda: ProgressWindow(self, self.engine.results_log))
+        self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
+        view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, self.piece_images))
+        view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
 
         view_menu.add_separator()
-        view_menu.add_command(label="Reset Progress...", command=self._confirm_reset)
+        view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
         header = tk.Frame(self, pady=10, bg="#f7f7f7")
@@ -576,7 +685,24 @@ class ChessPuzzleApp(tk.Toplevel):
         self.btn_hint.pack(side=tk.LEFT, padx=5)
         self.btn_hint.pack_forget()
 
-        ttk.Button(self.btn_container, text="Skip (-5 pts)", command=self._skip).pack(side=tk.LEFT, padx=5)
+        self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
+        self.skip_button.pack(side=tk.LEFT, padx=5)
+
+    def _set_lang(self, l):
+        self.lang = l
+        self.config_data["language"] = l
+        self._save_config()
+        self._setup_menu()
+        self.update_display()
+        self.load_puzzle()
+
+    def update_display(self):
+        if not self.engine: return
+        self.lbl_overall.config(
+            text=f"{self.t('score')}: {self.engine.total_score} | {self.t('done')}: {self.engine.total_done}")
+        self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
+        if self.board: self.lbl_turn.config(text=self.t("white_turn") if self.board.turn else self.t("black_turn"))
+        self.skip_button.config(text=self.t("skip"))
 
     # --- BOARD RENDERING ---
 
@@ -614,13 +740,14 @@ class ChessPuzzleApp(tk.Toplevel):
     def _confirm_reset(self):
         """ Asks for confirmation and resets the engine state. """
         filename = os.path.basename(self.engine.save_file).replace("_results.json", ".pgn")
-        msg = f"Are you sure you want to reset all progress for '{filename}'?"
+        msg = self.t('reset_msg')
+        msg = msg.replace("{}",filename)
 
-        if messagebox.askyesno("Reset Progress", msg):
+        if messagebox.askyesno(self.t("reset_title"), msg):
             self.engine.reset_history()
             self.update_status_display()
             self.refresh_board()
-            messagebox.showinfo("Reset", "Progress has been cleared.")
+            messagebox.showinfo(self.t("reset_title"), self.t("progress_cleared"))
             # Optional: reload the first puzzle to start fresh
             self.load_puzzle()
 
@@ -629,9 +756,9 @@ class ChessPuzzleApp(tk.Toplevel):
     def load_puzzle(self):
         puzzle = self.engine.get_next_random_puzzle()
         if not puzzle:
-            messagebox.showinfo("Done", "All puzzles finished!")
-            self.lbl_event.config(text="No puzzles active")
-            self.lbl_sub.config(text="Please load a PGN file via File -> Load")
+            messagebox.showinfo(self.t("done"), self.t("all_finished"))
+            self.lbl_event.config(text=self.t("no_puzzles"))
+            self.lbl_sub.config(text=self.t("load_pgn_msg"))
             self.lbl_turn.config(text="")
             self.lbl_attempts.config(text="")
             self.btn_hint.pack_forget()
@@ -651,7 +778,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_event.config(text=main_title)
 
         sub_info = []
-        if puzzle['themes']: sub_info.append(f"Themes: {puzzle['themes'].replace('_', ' ')}")
+        if puzzle['themes']: sub_info.append(self.t('themes')+f": {puzzle['themes'].replace('_', ' ')}")
         if puzzle['date'] and puzzle['date'] not in ["", "????", "?.?.?", "????.??.??"]: sub_info.append(
             f"[{puzzle['date']}]")
         self.lbl_sub.config(text=" | ".join(sub_info))
@@ -663,7 +790,7 @@ class ChessPuzzleApp(tk.Toplevel):
             self.last_move_squares = []
 
         self.is_flipped = (self.board.turn == chess.BLACK)
-        self.lbl_turn.config(text=f"{'WHITE' if self.board.turn else 'BLACK'} TO MOVE",
+        self.lbl_turn.config(text=f"{self.t('white_turn') if self.board.turn else self.t('black_turn')}",
                              fg="#2980b9" if self.board.turn else "#2c3e50")
         self.update_status_display()
         self.refresh_board()
@@ -753,7 +880,7 @@ class ChessPuzzleApp(tk.Toplevel):
             if self.solve_step >= len(p['solution']):
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
                 self.engine.total_score += puzzle_result
-                messagebox.showinfo("Correct", "Solved!")
+                messagebox.showinfo("Correct", self.t("solved")+"!")
                 self._show_solution_and_continue(puzzle_result)
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
@@ -777,16 +904,16 @@ class ChessPuzzleApp(tk.Toplevel):
         self.refresh_board()
 
     def _skip(self):
-        if self.board and messagebox.askyesno("Skip", "View solution? (-5 pts)"):
+        if self.board and messagebox.askyesno(self.t("skip2"), self.t("confirm_skip")):
             self.engine.total_score -= 5
             self._show_solution_and_continue(-5)
 
     def update_status_display(self):
-        status_text = (f"Score: {self.engine.total_score} | "
-                       f"Done: {self.engine.total_done} | "
-                       f"Solved: {self.engine.total_solved}")
+        status_text = (f"{self.t('score')}: {self.engine.total_score} | "
+                       f"{self.t('done')}: {self.engine.total_done} | "
+                       f"{self.engine.total_done}: {self.engine.total_solved}")
         self.lbl_overall.config(text=status_text)
-        self.lbl_attempts.config(text=f"Attempts left: {self.attempts_left}")
+        self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
 
     def _load_images(self):
         self.piece_images = {}
