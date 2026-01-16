@@ -244,11 +244,15 @@ class HistoryWindow(tk.Toplevel):
 
     def _prev_item(self):
         curr = int(float(self.nav_slider.get()))
-        if curr > 0: self.nav_slider.set(curr - 1); self._on_slider_move(curr - 1)
+        if curr > 0:
+            self.nav_slider.set(curr - 1)
+            self._on_slider_move(curr - 1)
 
     def _next_item(self):
         curr = int(float(self.nav_slider.get()))
-        if curr < len(self.item_ids) - 1: self.nav_slider.set(curr + 1); self._on_slider_move(curr + 1)
+        if curr < len(self.item_ids) - 1:
+            self.nav_slider.set(curr + 1)
+            self._on_slider_move(curr + 1)
 
     def _open_detail(self):
         selected = self.tree.selection()
@@ -360,11 +364,11 @@ class PuzzleEngine:
             base_name = os.path.splitext(pgn_file)[0]
             self.save_file = f"{base_name}_results.json"
 
-            # Load puzzles from PGN
-            self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
-
             # Load only the results log
             self.results_log = self._load_results()
+            # Load puzzles from PGN
+
+            self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
 
             # Calculate totals on the fly for the UI
             self.total_score = sum(r[1] for r in self.results_log)
@@ -382,7 +386,7 @@ class PuzzleEngine:
                         # Support both old format and new list format during transition
                         return data.get("results_log", [])
                 except:
-                    pass
+                    return []
             return []
 
         def save_state(self):
@@ -661,7 +665,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.is_flipped = (self.board.turn == chess.BLACK)
         self.lbl_turn.config(text=f"{'WHITE' if self.board.turn else 'BLACK'} TO MOVE",
                              fg="#2980b9" if self.board.turn else "#2c3e50")
-        self.update_status_display();
+        self.update_status_display()
         self.refresh_board()
         return True
 
@@ -695,22 +699,23 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _create_fallback_engine(self):
         dummy = PuzzleEngine.__new__(PuzzleEngine)
-        dummy.save_file = "temp_results.json";
-        dummy.total_score = dummy.total_solved = 0
-        dummy.played_history = {};
+        dummy.save_file = "temp_results.json"
+        dummy.total_score = dummy.total_solved = dummy.total_done = 0
+        dummy.played_history = {}
+        dummy.results_log = []
         dummy.puzzles = [{
             'fen': 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4',
             'initial_move': None, 'solution': [chess.Move.from_uci("h5f7")],
             'display_name': "Example Puzzle", 'date': "2026", 'event': "No PGN Loaded",
             'site': "", 'rating': "Easy", 'themes': "mateIn1"
-        }];
+        }]
         return dummy
 
     def _load_specific_pgn(self, filename):
         if not os.path.exists(filename): return
         if self.engine: self.engine.save_state()
-        self.engine = PuzzleEngine(filename);
-        self._add_to_recent(filename);
+        self.engine = PuzzleEngine(filename)
+        self._add_to_recent(filename)
         self.load_puzzle()
 
     def _menu_load_pgn(self):
@@ -724,24 +729,26 @@ class ChessPuzzleApp(tk.Toplevel):
         f, r_idx = (7 - c, r) if self.is_flipped else (c, 7 - r)
         sq = chess.square(f, r_idx)
         if self.selected_square is None:
-            if self.board.piece_at(sq): self.selected_square = sq; self.refresh_board()
+            if self.board.piece_at(sq):
+                self.selected_square = sq
+                self.refresh_board()
         else:
             move = chess.Move(self.selected_square, sq)
             if self.board.piece_at(self.selected_square) and self.board.piece_at(
                     self.selected_square).piece_type == chess.PAWN:
                 if (not self.is_flipped and r_idx == 7) or (
                         self.is_flipped and r_idx == 0): move.promotion = chess.QUEEN
-            self._handle_move(move);
-            self.selected_square = None;
+            self._handle_move(move)
+            self.selected_square = None
             self.refresh_board()
 
     def _handle_move(self, move):
         p = self.engine.puzzles[self.engine.current_index]
         if move == p['solution'][self.solve_step]:
-            self.btn_hint.pack_forget();
-            self.hint_square = None;
+            self.btn_hint.pack_forget()
+            self.hint_square = None
             self.board.push(move)
-            self.last_move_squares = [move.from_square, move.to_square];
+            self.last_move_squares = [move.from_square, move.to_square]
             self.solve_step += 1
             if self.solve_step >= len(p['solution']):
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
@@ -751,17 +758,18 @@ class ChessPuzzleApp(tk.Toplevel):
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
         else:
-            self.attempts_left -= 1;
+            self.attempts_left -= 1
             self.btn_hint.pack(side=tk.LEFT, padx=5)
             if self.attempts_left <= 0:
-                messagebox.showerror("Failed", "Out of attempts."); self._show_solution_and_continue(0)
+                messagebox.showerror("Failed", "Out of attempts.")
+                self._show_solution_and_continue(0)
             else:
                 self.update_status_display()
 
     def _opp_move(self, move):
-        self.board.push(move);
+        self.board.push(move)
         self.last_move_squares = [move.from_square, move.to_square]
-        self.solve_step += 1;
+        self.solve_step += 1
         self.refresh_board()
 
     def _show_hint(self):
@@ -770,7 +778,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _skip(self):
         if self.board and messagebox.askyesno("Skip", "View solution? (-5 pts)"):
-            self.engine.total_score -= 5;
+            self.engine.total_score -= 5
             self._show_solution_and_continue(-5)
 
     def update_status_display(self):
@@ -792,7 +800,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _on_close(self):
         if self.engine: self.engine.save_state()
-        self._save_config();
+        self._save_config()
         self.master.destroy()
 
 
