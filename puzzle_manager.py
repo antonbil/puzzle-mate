@@ -28,7 +28,7 @@ TRANSLATIONS = {
         "exit": "Exit", "open_recent": "Open Recent", "load_pgn":"Load PGN...","progress_cleared":"Progress has been cleared.",
         "no_data_msg": "No data available yet.",
         "footer_msg": "Keep solving to reach your next milestone!", "chess_puzzle_manager":"Chess Puzzle Manager",
-        "themes":"themes","puzzle_name":"Puzzle Name","status":"Status"
+        "themes":"themes","puzzle_name":"Puzzle Name","status":"Status","settings": "Settings", "board_color": "Board Color", "color_green": "Classic Green", "color_blue": "Ocean Blue", "color_brown": "Wood Brown", "color_gray": "Modern Gray"
     },
     "nl": {
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
@@ -46,7 +46,7 @@ TRANSLATIONS = {
         "exit": "Afsluiten", "open_recent": "Recent geopend", "load_pgn":"Laad PGN...", "progress_cleared":"Voortgang verwijderd.",
         "no_data_msg": "Nog geen gegevens beschikbaar.",
         "footer_msg": "Blijf puzzelen om je volgende mijlpaal te bereiken!", "chess_puzzle_manager":"Schaak Puzzel Manager",
-        "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status"
+        "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status","settings": "Instellingen", "board_color": "Bordkleur", "color_green": "Klassiek Groen", "color_blue": "Oceaan Blauw", "color_brown": "Hout Bruin", "color_gray": "Modern Grijs"
     },
     "de": {
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
@@ -64,7 +64,12 @@ TRANSLATIONS = {
         "exit": "Beenden", "open_recent": "Zuletzt geöffnet", "load_pgn":"PGN laden...", "progress_cleared":"Fortschritt wurde gelöscht.",
         "no_data_msg": "Noch keine Daten verfügbar.",
         "footer_msg": "Löse weiter, um dein nächstes Ziel zu erreichen!", "chess_puzzle_manager":"Schach-Rätsel-Manager",
-        "themes":"Themen","puzzle_name":"Rätselname","status":"Status"
+        "themes":"Themen","puzzle_name":"Rätselname","status":"Status","settings": "Einstellungen",
+    "board_color": "Brettfarbe",
+    "color_green": "Klassisches Grün",
+    "color_blue": "Ozeanblau",
+    "color_brown": "Holzbraun",
+    "color_gray": "Modernes Grau"
     },
     "fr": {
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
@@ -82,7 +87,13 @@ TRANSLATIONS = {
         "exit": "Quitter", "open_recent": "Ouvrir récents", "load_pgn":"Charger PGN...", "progress_cleared":"La progression a été effacée.",
         "no_data_msg": "Aucune donnée disponible pour le moment.",
         "footer_msg": "Continuez à résoudre pour atteindre votre prochain objectif !", "chess_puzzle_manager":"Gestionnaire de Puzzles d'Échecs",
-        "themes":"thèmes","puzzle_name":"Nom du Puzzle","status":"Statut"
+        "themes":"thèmes","puzzle_name":"Nom du Puzzle","status":"Statut",
+"settings": "Paramètres",
+    "board_color": "Couleur du plateau",
+    "color_green": "Vert classique",
+    "color_blue": "Bleu océan",
+    "color_brown": "Brun bois",
+    "color_gray": "Gris moderne"
     },
     "es": {
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
@@ -100,7 +111,13 @@ TRANSLATIONS = {
         "exit": "Salir", "open_recent": "Abrir recientes", "load_pgn":"Cargar PGN...", "progress_cleared":"Se ha borrado el progreso.",
         "no_data_msg": "Aún no hay datos disponibles.",
         "footer_msg": "¡Sigue resolviendo para alcanzar tu próximo hito!", "chess_puzzle_manager":"Gestor de Puzzles de Ajedrez",
-        "themes":"temas","puzzle_name":"Nombre del Puzzle","status":"Estado"
+        "themes":"temas","puzzle_name":"Nombre del Puzzle","status":"Estado",
+"settings": "Ajustes",
+    "board_color": "Color del tablero",
+    "color_green": "Verde clásico",
+    "color_blue": "Azul océano",
+    "color_brown": "Marrón madera",
+    "color_gray": "Gris moderno"
     }
 }
 
@@ -112,7 +129,7 @@ class PuzzleEngine:
         self.save_file = f"{base_name}_results.json"
 
         # Load only the results log
-        self.results_log = self._load_results()
+        self._load_results()
         # Load puzzles from PGN
 
         self.puzzles = self._load_puzzles(pgn_file) if os.path.exists(pgn_file) else []
@@ -122,8 +139,6 @@ class PuzzleEngine:
         self.total_done = len(self.results_log)
         self.total_solved = len([r for r in self.results_log if r[1] > 0])
 
-        self.current_index = -1
-
     def _load_results(self):
         """ Loads only the results_log from the JSON file. """
         if os.path.exists(self.save_file):
@@ -131,15 +146,20 @@ class PuzzleEngine:
                 with open(self.save_file, 'r') as f:
                     data = json.load(f)
                     # Support both old format and new list format during transition
-                    return data.get("results_log", [])
+                    self.results_log = data.get("results_log", [])
+                    self.current_index = data.get("current_index", -1)
             except:
-                return []
+                self.results_log = []
+                self.current_index = 0
         return []
 
     def save_state(self):
         """ The only state we need to save is the log of results. """
         with open(self.save_file, 'w') as f:
-            json.dump({"results_log": self.results_log}, f)
+            json.dump({
+                "results_log": self.results_log,
+                "current_index": self.current_index
+            }, f)
 
     def reset_history(self):
         """ Clears all results and resets the save file. """
@@ -189,7 +209,14 @@ class PuzzleEngine:
             print(f"PGN Error: {e}")
         return p_list
 
-    def get_next_random_puzzle(self):
+    def get_resume_or_next_puzzle(self):
+        """ Returns the last unfinished puzzle or a new random one. """
+        played_indices = {r[0] for r in self.results_log}
+
+        # Check if the current_index is already finished
+        if self.current_index != -1 and self.current_index not in played_indices:
+            return self.puzzles[self.current_index]
+
         # Exclude puzzles already present in the results_log
         played_indices = {r[0] for r in self.results_log}
         remaining = [i for i in range(len(self.puzzles)) if i not in played_indices]
@@ -206,13 +233,13 @@ class PuzzleEngine:
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle, original_images, score=None):
+    def __init__(self, parent, puzzle, original_images, score=None, t=None):
         super().__init__(parent)
-        self.lang, self.t = lang, lambda k: TRANSLATIONS[lang].get(k, k)
-        self.title(f"{self.t('review')} {puzzle['event']}")
+        self.parent = parent
+        self.title(f"{t('review')} {puzzle['event']}")
         # Header with score
-        score_text = f" ({self.t('score')}: {score})" if score is not None else ""
-        tk.Label(self, text=f"{self.t('review')} {puzzle['display_name']}{score_text}",
+        score_text = f" ({t('score')}: {score})" if score is not None else ""
+        tk.Label(self, text=f"{t('review')} {puzzle['display_name']}{score_text}",
                  font=("Arial", 12, "bold")).pack(pady=5)
         self.puzzle = puzzle
 
@@ -449,7 +476,7 @@ class HistoryWindow(tk.Toplevel):
         selected = self.tree.selection()
         if selected:
             val = self.tree.item(selected[0], "values")
-            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]))
+            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]), t=self.parent.t)
 
 
 class ProgressWindow(tk.Toplevel):
@@ -560,6 +587,15 @@ class ChessPuzzleApp(tk.Toplevel):
         # 1. Load configuration first (to access recent files)
         self.config_data = self._load_config()
         self.lang = self.config_data.get("language", "en")
+        # Load Board Theme from config
+        # Default to green theme if not set
+        self.board_theme = self.config_data.get("board_theme", "green")
+        self.themes = {
+            "green": {"light": "#ebecd0", "dark": "#779556"},
+            "blue": {"light": "#dee3e6", "dark": "#8ca2ad"},
+            "brown": {"light": "#f0d9b5", "dark": "#b58863"},
+            "gray": {"light": "#e0e0e0", "dark": "#a0a0a0"}
+        }
         self.t = lambda k: TRANSLATIONS[self.lang].get(k, k)
         self.title(self.t("chess_puzzle_manager"))
         # 2. Determine which file to load
@@ -641,14 +677,24 @@ class ChessPuzzleApp(tk.Toplevel):
         file_menu.add_separator()
         file_menu.add_command(label=self.t("exit"), command=self._on_close)
 
-        # Language Menu
-        l_m = tk.Menu(self.menubar, tearoff=0);
-        self.menubar.add_cascade(label=self.t("language"), menu=l_m)
-        l_m.add_command(label="English", command=lambda: self._set_lang("en"))
-        l_m.add_command(label="Nederlands", command=lambda: self._set_lang("nl"))
-        l_m.add_command(label="Deutsch", command=lambda: self._set_lang("de"))
-        l_m.add_command(label="Français", command=lambda: self._set_lang("fr"))
-        l_m.add_command(label="Español", command=lambda: self._set_lang("es"))
+        # --- NEW: Settings Menu ---
+        settings_m = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label=self.t("settings"), menu=settings_m)
+
+        # Submenu: Language
+        lang_m = tk.Menu(settings_m, tearoff=0)
+        settings_m.add_cascade(label=self.t("language"), menu=lang_m)
+        for code, name in [("en", "English"), ("nl", "Nederlands"), ("de", "Deutsch"), ("fr", "Français"),
+                           ("es", "Español")]:
+            lang_m.add_command(label=name, command=lambda c=code: self._set_lang(c))
+
+        # Submenu: Board Color
+        color_m = tk.Menu(settings_m, tearoff=0)
+        settings_m.add_cascade(label=self.t("board_color"), menu=color_m)
+        color_m.add_command(label=self.t("color_green"), command=lambda: self._set_theme("green"))
+        color_m.add_command(label=self.t("color_blue"), command=lambda: self._set_theme("blue"))
+        color_m.add_command(label=self.t("color_brown"), command=lambda: self._set_theme("brown"))
+        color_m.add_command(label=self.t("color_gray"), command=lambda: self._set_theme("gray"))
 
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
@@ -696,6 +742,13 @@ class ChessPuzzleApp(tk.Toplevel):
         self.update_display()
         self.load_puzzle()
 
+    def _set_theme(self, theme_key):
+        """ Updates the board theme and saves it to config. """
+        self.board_theme = theme_key
+        self.config_data["board_theme"] = theme_key
+        self._save_config()
+        self.refresh_board()
+
     def update_display(self):
         if not self.engine: return
         self.lbl_overall.config(
@@ -711,13 +764,15 @@ class ChessPuzzleApp(tk.Toplevel):
         self.canvas.delete("all")
         size = 480 // 8
         has_board = self.board is not None
+        colors = self.themes[self.board_theme]  # Get current colors
 
         for r in range(8):
             for c in range(8):
                 flipped = self.is_flipped if has_board else False
                 f_idx, r_idx = (7 - c, r) if flipped else (c, 7 - r)
                 sq = chess.square(f_idx, r_idx)
-                color = "#ebecd0" if (r + c) % 2 == 0 else "#779556"
+                # Pick color based on square parity
+                color = colors["light"] if (r + c) % 2 == 0 else colors["dark"]
                 outline, width = "", 1
 
                 if has_board:
@@ -754,7 +809,9 @@ class ChessPuzzleApp(tk.Toplevel):
     # --- CORE LOGIC ---
 
     def load_puzzle(self):
-        puzzle = self.engine.get_next_random_puzzle()
+        if not self.engine:
+            return
+        puzzle = self.engine.get_resume_or_next_puzzle()
         if not puzzle:
             messagebox.showinfo(self.t("done"), self.t("all_finished"))
             self.lbl_event.config(text=self.t("no_puzzles"))
@@ -820,7 +877,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
-        review = HistoryDetailWindow(self, p, self.piece_images, result_score)
+        review = HistoryDetailWindow(self, p, self.piece_images, result_score, t=self.t)
         self.wait_window(review)
         self.load_puzzle()
 
@@ -926,7 +983,7 @@ class ChessPuzzleApp(tk.Toplevel):
                 self.piece_images[s] = ImageTk.PhotoImage(img)
 
     def _on_close(self):
-        if self.engine: self.engine.save_state()
+        self.engine.save_state()
         self._save_config()
         self.master.destroy()
 
