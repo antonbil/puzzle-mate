@@ -233,9 +233,11 @@ class PuzzleEngine:
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle, original_images, score=None, t=None):
+    def __init__(self, parent, puzzle, original_images, score=None, t=None, board_theme=None, themes=None):
         super().__init__(parent)
         self.parent = parent
+        self.board_theme = board_theme
+        self.themes = themes
         self.title(f"{t('review')} {puzzle['event']}")
         # Header with score
         score_text = f" ({t('score')}: {score})" if score is not None else ""
@@ -342,12 +344,15 @@ class HistoryDetailWindow(tk.Toplevel):
     def refresh_board(self):
         self.canvas.delete("all")
         size = 400 // 8
+        colors = self.themes[self.board_theme]
         for r in range(8):
             for c in range(8):
                 f_idx = 7 - c if self.is_flipped else c
                 r_idx = r if self.is_flipped else 7 - r
                 sq = chess.square(f_idx, r_idx)
-                base_color = "#ebecd0" if (r + c) % 2 == 0 else "#779556"
+                # Use the theme colors
+                base_color = colors["light"] if (r + c) % 2 == 0 else colors["dark"]
+
                 outline = "#1565c0" if sq in self.last_move_squares else ""
                 width = 3 if sq in self.last_move_squares else 1
                 self.canvas.create_rectangle(c * size, r * size, (c + 1) * size, (r + 1) * size,
@@ -476,7 +481,7 @@ class HistoryWindow(tk.Toplevel):
         selected = self.tree.selection()
         if selected:
             val = self.tree.item(selected[0], "values")
-            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]), t=self.parent.t)
+            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]), t=self.parent.t, board_theme=self.parent.board_theme, themes=self.parent.themes)
 
 
 class ProgressWindow(tk.Toplevel):
@@ -877,7 +882,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
-        review = HistoryDetailWindow(self, p, self.piece_images, result_score, t=self.t)
+        review = HistoryDetailWindow(self, p, self.piece_images, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes)
         self.wait_window(review)
         self.load_puzzle()
 
