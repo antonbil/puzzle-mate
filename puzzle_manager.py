@@ -353,7 +353,7 @@ class HistoryDetailWindow(tk.Toplevel):
                 # Use the theme colors
                 base_color = colors["light"] if (r + c) % 2 == 0 else colors["dark"]
 
-                outline = "#1565c0" if sq in self.last_move_squares else ""
+                outline = self.themes[self.board_theme]["initial_move"] if sq in self.last_move_squares else ""
                 width = 3 if sq in self.last_move_squares else 1
                 self.canvas.create_rectangle(c * size, r * size, (c + 1) * size, (r + 1) * size,
                                              fill=base_color, outline=outline, width=width)
@@ -596,11 +596,28 @@ class ChessPuzzleApp(tk.Toplevel):
         # Default to green theme if not set
         self.board_theme = self.config_data.get("board_theme", "green")
         self.themes = {
-            "green": {"light": "#ebecd0", "dark": "#779556"},
-            "blue": {"light": "#dee3e6", "dark": "#8ca2ad"},
-            "brown": {"light": "#f0d9b5", "dark": "#b58863"},
-            "gray": {"light": "#e0e0e0", "dark": "#a0a0a0"}
+            "green": {
+                "light": "#ebecd0", "dark": "#779556", "frame": "#4e6138",
+                "inner_line": "#3b4a2a",  # Dark forest green
+                "initial_move": "#f5f682", "user_move": "#cedd6d"
+            },
+            "blue": {
+                "light": "#dee3e6", "dark": "#8ca2ad", "frame": "#5a6a73",
+                "inner_line": "#434f56",  # Deep slate blue
+                "initial_move": "#fff4d3", "user_move": "#bdc9cf"
+            },
+            "brown": {
+                "light": "#f0d9b5", "dark": "#b58863", "frame": "#6d4c41",
+                "inner_line": "#3e2723",  # Dark chocolate espresso
+                "initial_move": "#cd9118", "user_move": "#ffcc33"
+            },
+            "gray": {
+                "light": "#e0e0e0", "dark": "#a0a0a0", "frame": "#424242",
+                "inner_line": "#212121",  # Near black charcoal
+                "initial_move": "#ffffff", "user_move": "#c0c0c0"
+            }
         }
+        self.current_theme = self.themes[self.board_theme]
         self.t = lambda k: TRANSLATIONS[self.lang].get(k, k)
         self.title(self.t("chess_puzzle_manager"))
         # 2. Determine which file to load
@@ -721,7 +738,19 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_turn = tk.Label(header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7")
         self.lbl_turn.pack()
 
-        self.canvas = tk.Canvas(self, width=480, height=480, bg="white", highlightthickness=0)
+        # 'relief=tk.RIDGE' creates a classic raised decorative edge
+        self.outer_frame = tk.Frame(self,
+                                    bg=self.current_theme["frame"],  # A warm wood-like brown
+                                    bd=12,  # Thickness of the decorative frame
+                                    relief=tk.RIDGE)  # Decorative 3D border style
+        self.outer_frame.pack(pady=(20, 5), padx=5)
+
+        # The 'inner_border' creates a thin dark inlay line between the frame and the board
+        #self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2)
+        self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2, relief=tk.FLAT)
+        self.inner_border.pack()
+
+        self.canvas = tk.Canvas(self.inner_border, width=480, height=480, bg="white", highlightthickness=0)
         self.canvas.pack(pady=5)
         self.canvas.bind("<Button-1>", self._on_click)
 
@@ -750,6 +779,7 @@ class ChessPuzzleApp(tk.Toplevel):
     def _set_theme(self, theme_key):
         """ Updates the board theme and saves it to config. """
         self.board_theme = theme_key
+        self.current_theme = self.themes[self.board_theme]
         self.config_data["board_theme"] = theme_key
         self._save_config()
         self.refresh_board()
@@ -782,10 +812,10 @@ class ChessPuzzleApp(tk.Toplevel):
 
                 if has_board:
                     if sq == self.selected_square:
-                        color = "#f6f669"
+                        color = self.current_theme["user_move"]
                     elif sq == self.hint_square:
-                        color = "#82e0aa"
-                    if sq in self.last_move_squares: outline, width = "#1565c0", 4
+                        color = self.current_theme["user_move"]
+                    if sq in self.last_move_squares: outline, width = self.current_theme["initial_move"], 4
 
                 self.canvas.create_rectangle(c * size, r * size, (c + 1) * size, (r + 1) * size, fill=color,
                                              outline=outline, width=width)
