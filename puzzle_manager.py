@@ -28,7 +28,9 @@ TRANSLATIONS = {
         "exit": "Exit", "open_recent": "Open Recent", "load_pgn":"Load PGN...","progress_cleared":"Progress has been cleared.",
         "no_data_msg": "No data available yet.",
         "footer_msg": "Keep solving to reach your next milestone!", "chess_puzzle_manager":"Chess Puzzle Manager",
-        "themes":"themes","puzzle_name":"Puzzle Name","status":"Status","settings": "Settings", "board_color": "Board Color", "color_green": "Classic Green", "color_blue": "Ocean Blue", "color_brown": "Wood Brown", "color_gray": "Modern Gray"
+        "themes":"themes","puzzle_name":"Puzzle Name","status":"Status","settings": "Settings",
+        "board_color": "Board Color", "color_green": "Classic Green", "color_blue": "Ocean Blue",
+        "color_brown": "Wood Brown", "color_gray": "Modern Gray","back":"Back", "forward":"Forward", "close":"Close"
     },
     "nl": {
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
@@ -46,7 +48,10 @@ TRANSLATIONS = {
         "exit": "Afsluiten", "open_recent": "Recent geopend", "load_pgn":"Laad PGN...", "progress_cleared":"Voortgang verwijderd.",
         "no_data_msg": "Nog geen gegevens beschikbaar.",
         "footer_msg": "Blijf puzzelen om je volgende mijlpaal te bereiken!", "chess_puzzle_manager":"Schaak Puzzel Manager",
-        "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status","settings": "Instellingen", "board_color": "Bordkleur", "color_green": "Klassiek Groen", "color_blue": "Oceaan Blauw", "color_brown": "Hout Bruin", "color_gray": "Modern Grijs"
+        "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status","settings": "Instellingen",
+        "board_color": "Bordkleur", "color_green": "Klassiek Groen", "color_blue": "Oceaan Blauw",
+        "color_brown": "Hout Bruin", "color_gray": "Modern Grijs",
+"back": "Terug", "forward": "Verder", "close": "Sluiten"
     },
     "de": {
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
@@ -69,7 +74,8 @@ TRANSLATIONS = {
     "color_green": "Klassisches Grün",
     "color_blue": "Ozeanblau",
     "color_brown": "Holzbraun",
-    "color_gray": "Modernes Grau"
+    "color_gray": "Modernes Grau",
+"back": "Zurück", "forward": "Vorwärts", "close": "Schließen"
     },
     "fr": {
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
@@ -93,7 +99,8 @@ TRANSLATIONS = {
     "color_green": "Vert classique",
     "color_blue": "Bleu océan",
     "color_brown": "Brun bois",
-    "color_gray": "Gris moderne"
+    "color_gray": "Gris moderne",
+"back": "Précédent", "forward": "Suivant", "close": "Fermer"
     },
     "es": {
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
@@ -117,7 +124,8 @@ TRANSLATIONS = {
     "color_green": "Verde clásico",
     "color_blue": "Azul océano",
     "color_brown": "Marrón madera",
-    "color_gray": "Gris moderno"
+    "color_gray": "Gris moderno",
+"back": "Atrás", "forward": "Adelante", "close": "Cerrar"
     }
 }
 
@@ -238,10 +246,11 @@ class HistoryDetailWindow(tk.Toplevel):
         self.parent = parent
         self.board_theme = board_theme
         self.themes = themes
-        self.title(f"{t('review')} {puzzle['event']}")
+        self.t = t
+        self.title(f"{self.t('review')} {puzzle['event']}")
         # Header with score
-        score_text = f" ({t('score')}: {score})" if score is not None else ""
-        tk.Label(self, text=f"{t('review')} {puzzle['display_name']}{score_text}",
+        score_text = f" ({self.t('score')}: {score})" if score is not None else ""
+        tk.Label(self, text=f"{self.t('review')} {puzzle['display_name']}{score_text}",
                  font=("Arial", 12, "bold")).pack(pady=5)
         self.puzzle = puzzle
 
@@ -302,9 +311,9 @@ class HistoryDetailWindow(tk.Toplevel):
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=10)
 
-        ttk.Button(btn_frame, text="< Back", command=self._prev_move).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Forward >", command=self._next_move).pack(side=tk.LEFT, padx=5)
-        ttk.Button(self, text="Close", command=self.destroy).pack(pady=5)
+        ttk.Button(btn_frame, text="< "+self.t("back"), command=self._prev_move).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text=self.t("forward")+" >", command=self._next_move).pack(side=tk.LEFT, padx=5)
+        ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=5)
 
     def _update_display(self):
         """ Sync board and text highlighting. """
@@ -972,7 +981,7 @@ class ChessPuzzleApp(tk.Toplevel):
             if self.solve_step >= len(p['solution']):
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
                 self.engine.total_score += puzzle_result
-                messagebox.showinfo("Correct", self.t("solved")+"!")
+                messagebox.showinfo(self.t("correct"), self.t("solved")+"!")
                 self._show_solution_and_continue(puzzle_result)
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
@@ -980,7 +989,7 @@ class ChessPuzzleApp(tk.Toplevel):
             self.attempts_left -= 1
             self.btn_hint.pack(side=tk.LEFT, padx=5)
             if self.attempts_left <= 0:
-                messagebox.showerror("Failed", "Out of attempts.")
+                messagebox.showerror(self.t("failed"), self.t("out_of_attempts"))
                 self._show_solution_and_continue(0)
             else:
                 self.update_status_display()
