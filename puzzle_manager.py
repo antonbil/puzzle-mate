@@ -15,7 +15,7 @@ import cairosvg, io
 TRANSLATIONS = {
     "en": {
 "lang_name": "English",
-"piece_set": "Piece Set",
+"piece_set": "Piece Set","exit_window": "Close Window",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -41,7 +41,7 @@ TRANSLATIONS = {
     },
     "nl": {
 "lang_name": "Nederlands",
-"piece_set": "Stukken-set",
+"piece_set": "Stukken-set","exit_window": "Venster sluiten",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -67,7 +67,7 @@ TRANSLATIONS = {
 "color_emerald": "Smaragd Mint"
     },
     "de": {
-"lang_name": "Deutsch",
+"lang_name": "Deutsch","exit_window": "Fenster schließen",
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
         "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
         "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
@@ -96,7 +96,7 @@ TRANSLATIONS = {
 "color_emerald": "Smaragdgrün"
     },
     "fr": {
-"lang_name": "Français",
+"lang_name": "Français","exit_window": "Fermer la fenêtre",
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
         "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
         "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
@@ -126,7 +126,7 @@ TRANSLATIONS = {
 "color_emerald": "Menthe Émeraude"
     },
     "es": {
-"lang_name": "Español",
+"lang_name": "Español","exit_window": "Cerrar ventana",
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
         "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
         "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
@@ -156,6 +156,33 @@ TRANSLATIONS = {
 "color_emerald": "Menta Esmeralda"
     }
 }
+
+
+def load_svg_piece(filename, size):
+    """ Converts an SVG file to a Tkinter-compatible PhotoImage. """
+    filepath = filename
+
+    # English: Convert SVG to PNG in memory using cairosvg
+    png_data = cairosvg.svg2png(url=filepath, output_width=size, output_height=size)
+
+    # English: Open the PNG data with PIL and convert to Tkinter PhotoImage
+    image = Image.open(io.BytesIO(png_data))
+    return ImageTk.PhotoImage(image)
+
+
+def load_images(piece_set, size=60):
+    piece_images = {}
+    # Use the selected piece_set)
+
+    base_path = os.path.join("Images", piece_set)
+    mapping = {'P': 'wP.svg', 'R': 'wR.svg', 'N': 'wN.svg', 'B': 'wB.svg', 'Q': 'wQ.svg', 'K': 'wK.svg',
+               'p': 'bP.svg', 'r': 'bR.svg', 'n': 'bN.svg', 'b': 'bB.svg', 'q': 'bQ.svg', 'k': 'bK.svg'}
+    for s, f in mapping.items():
+        path = os.path.join(base_path, f)
+        if os.path.exists(path):
+            piece_images[s] = load_svg_piece(path, size)
+    return piece_images
+
 
 class Translator:
     def __init__(self, translations, default_lang="en"):
@@ -303,9 +330,10 @@ class PuzzleEngine:
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle, original_images, score=None, t=None, board_theme=None, themes=None):
+    def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None):
         super().__init__(parent)
         self.parent = parent
+        self.piece_set = piece_set
         self.board_theme = board_theme
         self.themes = themes
         self.t = t
@@ -316,8 +344,8 @@ class HistoryDetailWindow(tk.Toplevel):
                  font=("Arial", 12, "bold")).pack(pady=5)
         self.puzzle = puzzle
 
-        self.review_images = {}
-        self._scale_images(original_images)
+        self.piece_images = {}
+        self._load_images()
 
         # Setup board logic: start from FEN
         self.review_board = chess.Board(puzzle['fen'])
@@ -349,15 +377,9 @@ class HistoryDetailWindow(tk.Toplevel):
             temp_board.push(m)
         return sans
 
-    def _scale_images(self, original_images):
-        """ Resizes pieces to fit 50x50 squares. """
-        mapping = {'P': 'wP.png', 'R': 'wR.png', 'N': 'wN.png', 'B': 'wB.png', 'Q': 'wQ.png', 'K': 'wK.png',
-                   'p': 'bP.png', 'r': 'bR.png', 'n': 'bN.png', 'b': 'bB.png', 'q': 'bQ.png', 'k': 'bK.png'}
-        for sym, path_name in mapping.items():
-            path = os.path.join("Images", path_name)
-            if os.path.exists(path):
-                img = Image.open(path).resize((50, 50), Image.Resampling.LANCZOS)
-                self.review_images[sym] = ImageTk.PhotoImage(img)
+    def _load_images(self):
+        """ Load pieces to fit 50x50 squares. """
+        self.piece_images = load_images(self.piece_set, 50)
 
     def _setup_ui(self):
         self.canvas = tk.Canvas(self, width=400, height=400, bg="white", highlightthickness=0)
@@ -432,21 +454,23 @@ class HistoryDetailWindow(tk.Toplevel):
         for square, piece in self.review_board.piece_map().items():
             f, r = chess.square_file(square), chess.square_rank(square)
             col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
-            img = self.review_images.get(piece.symbol())
+            img = self.piece_images.get(piece.symbol())
             if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW)
 
 
 # --- HISTORY LIST WINDOW ---
 class HistoryWindow(tk.Toplevel):
-    def __init__(self, parent, engine, piece_images):
+    def __init__(self, parent, engine, piece_set=None):
         super().__init__(parent)
         self.parent = parent
+        self.piece_set = piece_set
         self.title(self.parent.t("history"))
         self.geometry("600x600")  # Slightly wider for larger fonts
+        # Initialize the menu for this specific window
+        self._setup_menu()
 
         self.results_log = engine.results_log
         self.puzzles = engine.puzzles
-        self.piece_images = piece_images
 
         # --- Touch Friendly Style Configuration ---
         self.style = ttk.Style()
@@ -519,6 +543,27 @@ class HistoryWindow(tk.Toplevel):
             self._on_slider_move(start_idx)
             self.parent.history_count_at_last_view = len(self.item_ids)
 
+    def _setup_menu(self):
+        """ Creates a menu bar for the History window. """
+        # Create the main menu bar
+        self.menu_bar = tk.Menu(self)
+        self.config(menu=self.menu_bar)
+
+        # Add a "File" (Bestand) menu
+        # We use the global translator 't' for the labels
+        file_m = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label=t("file"), menu=file_m)
+
+        # Add the close option with a shortcut key (Alt+F4 is standard, but we add a command)
+        file_m.add_command(
+            label=t("exit_window"),
+            command=self.destroy,
+            accelerator="Ctrl+W"  # Visual hint for the user
+        )
+
+        # Optional - Bind Ctrl+W to close the window as well
+        self.bind("<Control-w>", lambda e: self.destroy())
+
     def _on_slider_move(self, value):
         if not self.item_ids: return
         idx = int(float(value))
@@ -552,7 +597,8 @@ class HistoryWindow(tk.Toplevel):
         selected = self.tree.selection()
         if selected:
             val = self.tree.item(selected[0], "values")
-            HistoryDetailWindow(self, self.puzzles[int(val[0])], self.piece_images, int(val[2]), t=self.parent.t, board_theme=self.parent.board_theme, themes=self.parent.themes)
+            HistoryDetailWindow(self, self.puzzles[int(val[0])], int(val[2]), t=self.parent.t,
+                                board_theme=self.parent.board_theme, themes=self.parent.themes, piece_set=self.piece_set)
 
 
 class ProgressWindow(tk.Toplevel):
@@ -662,6 +708,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # 1. Load configuration first (to access recent files)
         self.config_data = self._load_config()
+        self.piece_set = self.config_data.get("piece_set", "staunty")
         self.lang = self.config_data.get("language", "en")
         # Load Board Theme from config
         # Default to green theme if not set
@@ -833,7 +880,7 @@ class ChessPuzzleApp(tk.Toplevel):
             )
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
-        view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, self.piece_images))
+        view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, piece_set=self.piece_set))
         view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
 
         view_menu.add_separator()
@@ -1052,7 +1099,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
-        review = HistoryDetailWindow(self, p, self.piece_images, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes)
+        review = HistoryDetailWindow(self, p, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes, piece_set=self.piece_set)
         self.wait_window(review)
         self.load_puzzle()
 
@@ -1147,28 +1194,10 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_overall.config(text=status_text)
         self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
 
-    def _load_svg_piece(self, filename, size):
-        """ Converts an SVG file to a Tkinter-compatible PhotoImage. """
-        filepath = filename
+    def _load_images(self, size=60):
+        self.piece_images = load_images(self.piece_set)
 
-        # English: Convert SVG to PNG in memory using cairosvg
-        png_data = cairosvg.svg2png(url=filepath, output_width=size, output_height=size)
 
-        # English: Open the PNG data with PIL and convert to Tkinter PhotoImage
-        image = Image.open(io.BytesIO(png_data))
-        return ImageTk.PhotoImage(image)
-
-    def _load_images(self):
-        self.piece_images = {}
-        # English: Use the selected set from config (defaults to 'tatiana')
-        piece_set = self.config_data.get("piece_set", "tatiana")
-        base_path = os.path.join("Images", piece_set)
-        mapping = {'P': 'wP.svg', 'R': 'wR.svg', 'N': 'wN.svg', 'B': 'wB.svg', 'Q': 'wQ.svg', 'K': 'wK.svg',
-                   'p': 'bP.svg', 'r': 'bR.svg', 'n': 'bN.svg', 'b': 'bB.svg', 'q': 'bQ.svg', 'k': 'bK.svg'}
-        for s, f in mapping.items():
-            path = os.path.join(base_path, f)
-            if os.path.exists(path):
-                self.piece_images[s] = self._load_svg_piece(path, 60)
 
     def _on_close(self):
         self.engine.save_state()
