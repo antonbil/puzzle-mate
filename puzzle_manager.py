@@ -9,11 +9,13 @@ import json
 import random
 import argparse
 from PIL import Image, ImageTk
+import cairosvg, io
 # --- TRANSLATIONS ---
 
 TRANSLATIONS = {
     "en": {
 "lang_name": "English",
+"piece_set": "Piece Set",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -39,6 +41,7 @@ TRANSLATIONS = {
     },
     "nl": {
 "lang_name": "Nederlands",
+"piece_set": "Stukken-set",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -815,6 +818,19 @@ class ChessPuzzleApp(tk.Toplevel):
         color_m.add_command(label=self.t("color_sand"), command=lambda: self._set_theme("sand"))
         color_m.add_command(label=self.t("color_emerald"), command=lambda: self._set_theme("emerald"))
 
+        # English: Submenu for Piece Sets
+        pieces_m = tk.Menu(settings_m, tearoff=0)
+        settings_m.add_cascade(label=t("piece_set"), menu=pieces_m)
+
+        # English: List available sets manually (or scan the Images folder)
+        available_sets = ["tatiana", "staunty"]
+
+        for p_set in available_sets:
+            # English: capitalize() makes the menu look cleaner (e.g., 'Staunty')
+            pieces_m.add_command(
+                label=p_set.capitalize(),
+                command=lambda s=p_set: self._set_piece_set(s)
+            )
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
         view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, self.piece_images))
@@ -885,6 +901,17 @@ class ChessPuzzleApp(tk.Toplevel):
         self._setup_menu()
         self.update_display()
         self.load_puzzle()
+
+    def _set_piece_set(self, set_name):
+        """ Updates the piece set, saves config, and reloads images. """
+        self.config_data["piece_set"] = set_name
+        self._save_config()
+
+        # English: Reload the images with the new set
+        self._load_images()
+
+        # English: Refresh the board to show new pieces
+        self.refresh_board()
 
     def _set_theme(self, theme_key):
         """ Updates the board theme and saves it to config. """
@@ -1120,15 +1147,28 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_overall.config(text=status_text)
         self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
 
+    def _load_svg_piece(self, filename, size):
+        """ Converts an SVG file to a Tkinter-compatible PhotoImage. """
+        filepath = filename
+
+        # English: Convert SVG to PNG in memory using cairosvg
+        png_data = cairosvg.svg2png(url=filepath, output_width=size, output_height=size)
+
+        # English: Open the PNG data with PIL and convert to Tkinter PhotoImage
+        image = Image.open(io.BytesIO(png_data))
+        return ImageTk.PhotoImage(image)
+
     def _load_images(self):
         self.piece_images = {}
-        mapping = {'P': 'wP.png', 'R': 'wR.png', 'N': 'wN.png', 'B': 'wB.png', 'Q': 'wQ.png', 'K': 'wK.png',
-                   'p': 'bP.png', 'r': 'bR.png', 'n': 'bN.png', 'b': 'bB.png', 'q': 'bQ.png', 'k': 'bK.png'}
+        # English: Use the selected set from config (defaults to 'tatiana')
+        piece_set = self.config_data.get("piece_set", "tatiana")
+        base_path = os.path.join("Images", piece_set)
+        mapping = {'P': 'wP.svg', 'R': 'wR.svg', 'N': 'wN.svg', 'B': 'wB.svg', 'Q': 'wQ.svg', 'K': 'wK.svg',
+                   'p': 'bP.svg', 'r': 'bR.svg', 'n': 'bN.svg', 'b': 'bB.svg', 'q': 'bQ.svg', 'k': 'bK.svg'}
         for s, f in mapping.items():
-            path = os.path.join("Images", f)
+            path = os.path.join(base_path, f)
             if os.path.exists(path):
-                img = Image.open(path).resize((60, 60), Image.Resampling.LANCZOS)
-                self.piece_images[s] = ImageTk.PhotoImage(img)
+                self.piece_images[s] = self._load_svg_piece(path, 60)
 
     def _on_close(self):
         self.engine.save_state()
