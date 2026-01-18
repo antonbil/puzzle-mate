@@ -330,7 +330,7 @@ class PuzzleEngine:
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None):
+    def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None, remarks = ""):
         super().__init__(parent)
         self.parent = parent
         self.piece_set = piece_set
@@ -338,10 +338,22 @@ class HistoryDetailWindow(tk.Toplevel):
         self.themes = themes
         self.t = t
         self.title(f"{self.t('review')} {puzzle['event']}")
-        # Header with score
+
+        # Create a container frame to hold both labels side by side
+        header_frame = tk.Frame(self)
+        header_frame.pack(pady=5)
+        # Create the 'remarks' label on the left side
+
+        if remarks:
+            tk.Label(header_frame,
+                 text=remarks,
+                 font=("Arial", 14, "italic"),
+                 fg=self.themes[self.board_theme]["alert"] ).pack(side=tk.LEFT, padx=(0, 5))
+
+        # Header label with score
         score_text = f" ({self.t('score')}: {score})" if score is not None else ""
-        tk.Label(self, text=f"{self.t('review')} {puzzle['display_name']}{score_text}",
-                 font=("Arial", 12, "bold")).pack(pady=5)
+        tk.Label(header_frame, text=f"{self.t('review')} {puzzle['display_name']}{score_text}",
+                 font=("Arial", 12, "bold")).pack( pady=5)
         self.puzzle = puzzle
 
         self.piece_images = {}
@@ -1075,7 +1087,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.refresh_board()
         return True
 
-    def _show_solution_and_continue(self, result_score=0):
+    def _show_solution_and_continue(self, result_score=0, remarks=""):
         """
         result_score should be an int:
         10 (perfect), 5/2 (partial), 0 (failed), -5 (skipped)
@@ -1099,7 +1111,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
-        review = HistoryDetailWindow(self, p, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes, piece_set=self.piece_set)
+        review = HistoryDetailWindow(self, p, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes, piece_set=self.piece_set, remarks=remarks)
         self.wait_window(review)
         self.load_puzzle()
 
@@ -1159,16 +1171,16 @@ class ChessPuzzleApp(tk.Toplevel):
             if self.solve_step >= len(p['solution']):
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
                 self.engine.total_score += puzzle_result
-                messagebox.showinfo(self.t("correct"), self.t("solved")+"!")
-                self._show_solution_and_continue(puzzle_result)
+                #messagebox.showinfo(self.t("correct"), self.t("solved")+"!")
+                self._show_solution_and_continue(puzzle_result,self.t("solved"))
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
         else:
             self.attempts_left -= 1
             self.btn_hint.pack(side=tk.LEFT, padx=5)
             if self.attempts_left <= 0:
-                messagebox.showerror(self.t("failed"), self.t("out_of_attempts"))
-                self._show_solution_and_continue(0)
+                #messagebox.showerror(self.t("failed"), self.t("out_of_attempts"))
+                self._show_solution_and_continue(0, self.t("out_of_attempts"))
             else:
                 self.update_status_display()
 
@@ -1185,7 +1197,7 @@ class ChessPuzzleApp(tk.Toplevel):
     def _skip(self):
         if self.board and messagebox.askyesno(self.t("skip2"), self.t("confirm_skip")):
             self.engine.total_score -= 5
-            self._show_solution_and_continue(-5)
+            self._show_solution_and_continue(-5, self.t("skip2"))
 
     def update_status_display(self):
         status_text = (f"{self.t('score')}: {self.engine.total_score} | "
