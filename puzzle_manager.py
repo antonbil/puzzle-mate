@@ -30,7 +30,11 @@ TRANSLATIONS = {
         "footer_msg": "Keep solving to reach your next milestone!", "chess_puzzle_manager":"Chess Puzzle Manager",
         "themes":"themes","puzzle_name":"Puzzle Name","status":"Status","settings": "Settings",
         "board_color": "Board Color", "color_green": "Classic Green", "color_blue": "Ocean Blue",
-        "color_brown": "Wood Brown", "color_gray": "Modern Gray","back":"Back", "forward":"Forward", "close":"Close"
+        "color_brown": "Wood Brown", "color_gray": "Modern Gray","back":"Back", "forward":"Forward", "close":"Close",
+"color_purple": "Royal Purple",
+"color_night": "Midnight Blue",
+"color_sand": "Desert Sand",
+"color_emerald": "Emerald Mint"
     },
     "nl": {
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
@@ -51,7 +55,11 @@ TRANSLATIONS = {
         "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status","settings": "Instellingen",
         "board_color": "Bordkleur", "color_green": "Klassiek Groen", "color_blue": "Oceaan Blauw",
         "color_brown": "Hout Bruin", "color_gray": "Modern Grijs",
-"back": "Terug", "forward": "Verder", "close": "Sluiten"
+"back": "Terug", "forward": "Verder", "close": "Sluiten",
+"color_purple": "Koninklijk Paars",
+"color_night": "Middernacht Blauw",
+"color_sand": "Woestijnzand",
+"color_emerald": "Smaragd Mint"
     },
     "de": {
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
@@ -75,7 +83,11 @@ TRANSLATIONS = {
     "color_blue": "Ozeanblau",
     "color_brown": "Holzbraun",
     "color_gray": "Modernes Grau",
-"back": "Zurück", "forward": "Vorwärts", "close": "Schließen"
+"back": "Zurück", "forward": "Vorwärts", "close": "Schließen",
+"color_purple": "Königliches Violett",
+"color_night": "Mitternachtsblau",
+"color_sand": "Wüstensand",
+"color_emerald": "Smaragdgrün"
     },
     "fr": {
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
@@ -100,7 +112,11 @@ TRANSLATIONS = {
     "color_blue": "Bleu océan",
     "color_brown": "Brun bois",
     "color_gray": "Gris moderne",
-"back": "Précédent", "forward": "Suivant", "close": "Fermer"
+"back": "Précédent", "forward": "Suivant", "close": "Fermer",
+"color_purple": "Pourpre Royal",
+"color_night": "Bleu de Minuit",
+"color_sand": "Sable du Désert",
+"color_emerald": "Menthe Émeraude"
     },
     "es": {
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
@@ -125,7 +141,11 @@ TRANSLATIONS = {
     "color_blue": "Azul océano",
     "color_brown": "Marrón madera",
     "color_gray": "Gris moderno",
-"back": "Atrás", "forward": "Adelante", "close": "Cerrar"
+"back": "Atrás", "forward": "Adelante", "close": "Cerrar",
+"color_purple": "Púrpura Real",
+"color_night": "Azul Medianoche",
+"color_sand": "Arena del Desierto",
+"color_emerald": "Menta Esmeralda"
     }
 }
 
@@ -607,23 +627,43 @@ class ChessPuzzleApp(tk.Toplevel):
         self.themes = {
             "green": {
                 "light": "#ebecd0", "dark": "#779556", "frame": "#4e6138",
-                "inner_line": "#3b4a2a",  # Dark forest green
-                "initial_move": "#f5f682", "user_move": "#cedd6d"
+                "inner_line": "#3b4a2a", "initial_move": "#f5f682", "user_move": "#cedd6d",
+                "alert": "#a93226"  # Deep brick red
             },
             "blue": {
                 "light": "#dee3e6", "dark": "#8ca2ad", "frame": "#5a6a73",
-                "inner_line": "#434f56",  # Deep slate blue
-                "initial_move": "#fff4d3", "user_move": "#bdc9cf"
+                "inner_line": "#434f56", "initial_move": "#fff4d3", "user_move": "#bdc9cf",
+                "alert": "#e67e22"  # Vibrant orange (stands out against blue)
             },
             "brown": {
                 "light": "#f0d9b5", "dark": "#b58863", "frame": "#6d4c41",
-                "inner_line": "#3e2723",  # Dark chocolate espresso
-                "initial_move": "#cd9118", "user_move": "#ffcc33"
+                "inner_line": "#3e2723", "initial_move": "#cd9118", "user_move": "#ffcc33",
+                "alert": "#b03a2e"  # Darker mahogany red
             },
             "gray": {
                 "light": "#e0e0e0", "dark": "#a0a0a0", "frame": "#424242",
-                "inner_line": "#212121",  # Near black charcoal
-                "initial_move": "#ffffff", "user_move": "#c0c0c0"
+                "inner_line": "#212121", "initial_move": "#ffffff", "user_move": "#c0c0c0",
+                "alert": "#444444"  # Strong charcoal (minimalist alert)
+            },
+            "purple": {
+                "light": "#f1e3f1", "dark": "#9b719b", "frame": "#5e455e",
+                "inner_line": "#3d2d3d", "initial_move": "#f6e495", "user_move": "#c9a9c9",
+                "alert": "#8e44ad"
+            },
+            "night": {
+                "light": "#4b5b6b", "dark": "#2c3e50", "frame": "#1a252f",
+                "inner_line": "#0f161c", "initial_move": "#f1c40f", "user_move": "#5d6d7e",
+                "alert": "#e74c3c"
+            },
+            "sand": {
+                "light": "#f4f1ea", "dark": "#d2b48c", "frame": "#8b7355",
+                "inner_line": "#5d4d39", "initial_move": "#cd9118", "user_move": "#e6ccac",
+                "alert": "#a0522d"
+            },
+            "emerald": {
+                "light": "#e0f2f1", "dark": "#4db6ac", "frame": "#00695c",
+                "inner_line": "#004d40", "initial_move": "#fff176", "user_move": "#b2dfdb",
+                "alert": "#00acc1"
             }
         }
         self.current_theme = self.themes[self.board_theme]
@@ -726,6 +766,12 @@ class ChessPuzzleApp(tk.Toplevel):
         color_m.add_command(label=self.t("color_blue"), command=lambda: self._set_theme("blue"))
         color_m.add_command(label=self.t("color_brown"), command=lambda: self._set_theme("brown"))
         color_m.add_command(label=self.t("color_gray"), command=lambda: self._set_theme("gray"))
+        # decorative themes
+        color_m.add_separator()
+        color_m.add_command(label=self.t("color_purple"), command=lambda: self._set_theme("purple"))
+        color_m.add_command(label=self.t("color_night"), command=lambda: self._set_theme("night"))
+        color_m.add_command(label=self.t("color_sand"), command=lambda: self._set_theme("sand"))
+        color_m.add_command(label=self.t("color_emerald"), command=lambda: self._set_theme("emerald"))
 
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
@@ -744,7 +790,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_event.pack()
         self.lbl_sub = tk.Label(header, text="", font=("Segoe UI", 9, "italic"), bg="#f7f7f7", fg="#555")
         self.lbl_sub.pack()
-        self.lbl_turn = tk.Label(header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7")
+        self.lbl_turn = tk.Label(header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7", fg=self.themes[self.board_theme]["alert"])
         self.lbl_turn.pack()
 
         # 'relief=tk.RIDGE' creates a classic raised decorative edge
@@ -765,7 +811,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         footer = tk.Frame(self, pady=10)
         footer.pack(fill=tk.X)
-        self.lbl_attempts = tk.Label(footer, text="", font=("Segoe UI", 10, "bold"), fg="#e74c3c")
+        self.lbl_attempts = tk.Label(footer, text="", font=("Segoe UI", 10, "bold"), fg=self.themes[self.board_theme]["alert"])
         self.lbl_attempts.pack()
 
         self.btn_container = tk.Frame(footer)
@@ -792,14 +838,17 @@ class ChessPuzzleApp(tk.Toplevel):
         self.config_data["board_theme"] = theme_key
         self._save_config()
         self.refresh_board()
+        self.update_display()
 
     def update_display(self):
         if not self.engine: return
         self.lbl_overall.config(
             text=f"{self.t('score')}: {self.engine.total_score} | {self.t('done')}: {self.engine.total_done}")
         self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
-        if self.board: self.lbl_turn.config(text=self.t("white_turn") if self.board.turn else self.t("black_turn"))
+        if self.board: self.lbl_turn.config(text=self.t("white_turn") if self.board.turn else self.t("black_turn"),fg=self.themes[self.board_theme]["alert"])
         self.skip_button.config(text=self.t("skip"))
+        self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"])
+        self.lbl_turn.config(fg=self.themes[self.board_theme]["alert"])
 
     # --- BOARD RENDERING ---
 
@@ -892,7 +941,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         self.is_flipped = (self.board.turn == chess.BLACK)
         self.lbl_turn.config(text=f"{self.t('white_turn') if self.board.turn else self.t('black_turn')}",
-                             fg="#2980b9" if self.board.turn else "#2c3e50")
+                             fg=self.themes[self.board_theme]["alert"])
         self.update_status_display()
         self.refresh_board()
         return True
