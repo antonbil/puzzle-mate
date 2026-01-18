@@ -1162,6 +1162,11 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _handle_move(self, move):
         p = self.engine.puzzles[self.engine.current_index]
+        if self.solve_step >= len(p['solution']):
+            puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
+            self.engine.total_score += puzzle_result
+            self._show_solution_and_continue(puzzle_result, "Error in puzzle")
+            return
         if move == p['solution'][self.solve_step]:
             self.btn_hint.pack_forget()
             self.hint_square = None
