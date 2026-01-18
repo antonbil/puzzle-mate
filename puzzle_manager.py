@@ -13,6 +13,7 @@ from PIL import Image, ImageTk
 
 TRANSLATIONS = {
     "en": {
+"lang_name": "English",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -37,6 +38,7 @@ TRANSLATIONS = {
 "color_emerald": "Emerald Mint"
     },
     "nl": {
+"lang_name": "Nederlands",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -62,6 +64,7 @@ TRANSLATIONS = {
 "color_emerald": "Smaragd Mint"
     },
     "de": {
+"lang_name": "Deutsch",
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
         "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
         "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
@@ -90,6 +93,7 @@ TRANSLATIONS = {
 "color_emerald": "Smaragdgrün"
     },
     "fr": {
+"lang_name": "Français",
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
         "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
         "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
@@ -119,6 +123,7 @@ TRANSLATIONS = {
 "color_emerald": "Menthe Émeraude"
     },
     "es": {
+"lang_name": "Español",
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
         "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
         "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
@@ -148,6 +153,40 @@ TRANSLATIONS = {
 "color_emerald": "Menta Esmeralda"
     }
 }
+
+class Translator:
+    def __init__(self, translations, default_lang="en"):
+        self.translations = translations
+        self.current_lang = default_lang
+        # English: Use English as a fallback if a translation is missing
+        self.fallback_lang = "en"
+
+    def set_language(self, lang_code):
+        """ Updates the current language selection. """
+        if lang_code in self.translations:
+            self.current_lang = lang_code
+
+    def get_available_languages(self):
+        """ Returns a list of tuples: (iso_code, readable_name) """
+        # English: Extract the iso code (key) and the 'lang_name' value
+        return [(code, lang_dict.get("lang_name", code))
+                for code, lang_dict in self.translations.items()]
+
+    def __call__(self, key):
+        """
+        The magic method that allows the object to be called like a function: t("key")
+        """
+        # English: Try to get the translation in the current language
+        lang_dict = self.translations.get(self.current_lang, {})
+        translation = lang_dict.get(key)
+
+        if translation:
+            return translation
+
+        # English: Fallback logic if the key is missing in the current language
+        return self.translations.get(self.fallback_lang, {}).get(key, key)
+
+t = Translator(TRANSLATIONS, default_lang="en")
 
 # --- ENGINE ---
 
@@ -667,7 +706,8 @@ class ChessPuzzleApp(tk.Toplevel):
             }
         }
         self.current_theme = self.themes[self.board_theme]
-        self.t = lambda k: TRANSLATIONS[self.lang].get(k, k)
+        self.t = lambda k: t(k)
+        t.set_language(self.lang)
         self.title(self.t("chess_puzzle_manager"))
         # 2. Determine which file to load
         target_file = None
@@ -753,6 +793,8 @@ class ChessPuzzleApp(tk.Toplevel):
         self.menubar.add_cascade(label=self.t("settings"), menu=settings_m)
 
         # Submenu: Language
+        #self._setup_lang_menu(settings_m, self.t)
+
         lang_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=self.t("language"), menu=lang_m)
         for code, name in [("en", "English"), ("nl", "Nederlands"), ("de", "Deutsch"), ("fr", "Français"),
@@ -823,8 +865,21 @@ class ChessPuzzleApp(tk.Toplevel):
         self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
         self.skip_button.pack(side=tk.LEFT, padx=5)
 
+    def _setup_lang_menu(self, parent_menu, translator):
+        """ Dynamically builds the language selection menu. """
+        lang_menu = tk.Menu(parent_menu, tearoff=0)
+        parent_menu.add_cascade(label=translator("language"), menu=lang_menu)
+
+        # English: Loop through available languages from the translator object
+        # for code, name in translator.get_available_languages():
+        #     # English: We use 'l=code' in the lambda to capture the current value of code
+        #     lang_menu.add_command(
+        #         label=name,
+        #         command=lambda l=code: self._set_lang(l)
+        #     )
     def _set_lang(self, l):
         self.lang = l
+        t.set_language(self.lang)
         self.config_data["language"] = l
         self._save_config()
         self._setup_menu()
