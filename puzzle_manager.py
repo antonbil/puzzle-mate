@@ -16,6 +16,7 @@ TRANSLATIONS = {
     "en": {
 "lang_name": "English",
 "piece_set": "Piece Set","exit_window": "Close Window",
+"board_size": "Board Size", "small": "Small", "medium": "Medium", "large": "Large","extra_large": "Extra Large", "huge": "Huge",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -41,7 +42,8 @@ TRANSLATIONS = {
     },
     "nl": {
 "lang_name": "Nederlands",
-"piece_set": "Stukken-set","exit_window": "Venster sluiten",
+"piece_set": "Stukken-set","exit_window": "Venster sluiten","board_size": "Bordgrootte", "small": "Klein",
+        "medium": "Gemiddeld", "large": "Groot","extra_large": "Extra Groot", "huge": "Gigantisch",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -67,7 +69,12 @@ TRANSLATIONS = {
 "color_emerald": "Smaragd Mint"
     },
     "de": {
-"lang_name": "Deutsch","exit_window": "Fenster schließen",
+"lang_name": "Deutsch","exit_window": "Fenster schließen","board_size": "Brettgröße",
+        "small": "Klein",
+        "medium": "Mittel",
+        "large": "Groß",
+        "extra_large": "Extragroß",
+        "huge": "Riesig",
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
         "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
         "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
@@ -96,7 +103,12 @@ TRANSLATIONS = {
 "color_emerald": "Smaragdgrün"
     },
     "fr": {
-"lang_name": "Français","exit_window": "Fermer la fenêtre",
+"lang_name": "Français","exit_window": "Fermer la fenêtre","board_size": "Taille du plateau",
+        "small": "Petit",
+        "medium": "Moyen",
+        "large": "Grand",
+        "extra_large": "Très grand",
+        "huge": "Géant",
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
         "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
         "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
@@ -126,7 +138,12 @@ TRANSLATIONS = {
 "color_emerald": "Menthe Émeraude"
     },
     "es": {
-"lang_name": "Español","exit_window": "Cerrar ventana",
+"lang_name": "Español","exit_window": "Cerrar ventana","board_size": "Tamaño del tablero",
+        "small": "Pequeño",
+        "medium": "Mediano",
+        "large": "Grande",
+        "extra_large": "Muy grande",
+        "huge": "Gigante",
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
         "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
         "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
@@ -720,6 +737,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # 1. Load configuration first (to access recent files)
         self.config_data = self._load_config()
+        self.field_size = self.config_data.get("field_size", 70)
         self.piece_set = self.config_data.get("piece_set", "staunty")
         self.lang = self.config_data.get("language", "en")
         # Load Board Theme from config
@@ -800,7 +818,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.solve_step = 0
         self.is_flipped = False
 
-        self._load_images()
+        self._load_images(self.field_size)
         self._setup_menu()
         self._setup_ui()
 
@@ -890,6 +908,27 @@ class ChessPuzzleApp(tk.Toplevel):
                 label=p_set.capitalize(),
                 command=lambda s=p_set: self._set_piece_set(s)
             )
+
+            # English: Submenu for Board Size
+            size_m = tk.Menu(settings_m, tearoff=0)
+            settings_m.add_cascade(label=t("board_size"), menu=size_m)
+
+            # English: Mapping display keys to pixel values
+            sizes = [
+                ("small", 60),
+                ("medium", 70),
+                ("large", 77),
+                ("extra_large", 84),
+                ("huge", 90)
+            ]
+
+            for key, val in sizes:
+                # English: We use l=val to capture the current size in the loop
+                size_m.add_command(
+                    label=t(key),
+                    command=lambda v=val: self._set_field_size(v)
+                )
+
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
         view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, piece_set=self.piece_set))
@@ -922,7 +961,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2, relief=tk.FLAT)
         self.inner_border.pack()
 
-        self.canvas = tk.Canvas(self.inner_border, width=480, height=480, bg="white", highlightthickness=0)
+        self.canvas = tk.Canvas(self.inner_border, width=self.field_size*8, height=self.field_size*8, bg="white", highlightthickness=0)
         self.canvas.pack(pady=5)
         self.canvas.bind("<Button-1>", self._on_click)
 
@@ -939,6 +978,20 @@ class ChessPuzzleApp(tk.Toplevel):
 
         self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
         self.skip_button.pack(side=tk.LEFT, padx=5)
+
+    def _set_field_size(self, size):
+        """ Updates the field size, reloads images at the new scale, and resizes the board. """
+        self.field_size = size
+        self.config_data["field_size"] = size
+        self._save_config()
+
+        # English: We must reload images because they need to be re-scaled to the new size
+        self._load_images(size)
+
+        # English: Update the canvas size and refresh everything
+        canvas_width = size * 8
+        self.canvas.config(width=canvas_width, height=canvas_width)
+        self.refresh_board()
 
     def _setup_lang_menu(self, parent_menu, translator):
         """ Dynamically builds the language selection menu. """
@@ -967,7 +1020,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self._save_config()
 
         # English: Reload the images with the new set
-        self._load_images()
+        self._load_images(self.field_size)
 
         # English: Refresh the board to show new pieces
         self.refresh_board()
@@ -996,7 +1049,7 @@ class ChessPuzzleApp(tk.Toplevel):
     def refresh_board(self):
         if not self.canvas.winfo_exists(): return
         self.canvas.delete("all")
-        size = 480 // 8
+        size = self.field_size
         has_board = self.board is not None
         colors = self.themes[self.board_theme]  # Get current colors
 
@@ -1142,7 +1195,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _on_click(self, event):
         if self.board is None: return
-        size = 480 // 8
+        size = self.field_size
         c, r = event.x // size, event.y // size
         f, r_idx = (7 - c, r) if self.is_flipped else (c, 7 - r)
         sq = chess.square(f, r_idx)
@@ -1212,7 +1265,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_attempts.config(text=f"{self.t('attempts')}: {self.attempts_left}")
 
     def _load_images(self, size=60):
-        self.piece_images = load_images(self.piece_set)
+        self.piece_images = load_images(self.piece_set, size)
 
 
 
