@@ -17,6 +17,7 @@ TRANSLATIONS = {
 "lang_name": "English",
 "piece_set": "Piece Set","exit_window": "Close Window",
 "board_size": "Board Size", "small": "Small", "medium": "Medium", "large": "Large","extra_large": "Extra Large", "huge": "Huge",
+"orientation": "Orientation", "portrait": "Portrait", "landscape": "Landscape",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -44,6 +45,7 @@ TRANSLATIONS = {
 "lang_name": "Nederlands",
 "piece_set": "Stukken-set","exit_window": "Venster sluiten","board_size": "Bordgrootte", "small": "Klein",
         "medium": "Gemiddeld", "large": "Groot","extra_large": "Extra Groot", "huge": "Gigantisch",
+"orientation": "Oriëntatie", "portrait": "Staand", "landscape": "Liggend",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -75,6 +77,7 @@ TRANSLATIONS = {
         "large": "Groß",
         "extra_large": "Extragroß",
         "huge": "Riesig",
+"orientation": "Ausrichtung", "portrait": "Hochformat", "landscape": "Querformat",
         "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
         "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
         "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
@@ -109,6 +112,7 @@ TRANSLATIONS = {
         "large": "Grand",
         "extra_large": "Très grand",
         "huge": "Géant",
+"orientation": "Orientation", "portrait": "Portrait", "landscape": "Paysage",
         "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
         "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
         "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
@@ -144,6 +148,7 @@ TRANSLATIONS = {
         "large": "Grande",
         "extra_large": "Muy grande",
         "huge": "Gigante",
+"orientation": "Orientación", "portrait": "Retrato", "landscape": "Paisaje",
         "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
         "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
         "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
@@ -913,21 +918,26 @@ class ChessPuzzleApp(tk.Toplevel):
             size_m = tk.Menu(settings_m, tearoff=0)
             settings_m.add_cascade(label=t("board_size"), menu=size_m)
 
-            # English: Mapping display keys to pixel values
-            sizes = [
-                ("small", 60),
-                ("medium", 70),
-                ("large", 77),
-                ("extra_large", 84),
-                ("huge", 90)
-            ]
+        # English: Mapping display keys to pixel values
+        sizes = [
+            ("small", 60),
+            ("medium", 70),
+            ("large", 77),
+            ("extra_large", 84),
+            ("huge", 90)
+        ]
 
-            for key, val in sizes:
-                # English: We use l=val to capture the current size in the loop
-                size_m.add_command(
-                    label=t(key),
-                    command=lambda v=val: self._set_field_size(v)
-                )
+        for key, val in sizes:
+            # English: We use l=val to capture the current size in the loop
+            size_m.add_command(
+                label=t(key),
+                command=lambda v=val: self._set_field_size(v)
+            )
+        # English: Orientation Submenu
+        orient_m = tk.Menu(settings_m, tearoff=0)
+        settings_m.add_cascade(label=t("orientation"), menu=orient_m)
+        orient_m.add_command(label=t("portrait"), command=lambda: self._set_orientation("portrait"))
+        orient_m.add_command(label=t("landscape"), command=lambda: self._set_orientation("landscape"))
 
         view_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
@@ -938,15 +948,15 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
-        header = tk.Frame(self, pady=10, bg="#f7f7f7")
-        header.pack(fill=tk.X)
-        self.lbl_overall = tk.Label(header, text="", font=("Segoe UI", 10), bg="#f7f7f7")
+        self.header = tk.Frame(self, pady=10, bg="#f7f7f7")
+        self.header.pack(fill=tk.X)
+        self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10), bg="#f7f7f7")
         self.lbl_overall.pack()
-        self.lbl_event = tk.Label(header, text="", font=("Segoe UI", 12, "bold"), bg="#f7f7f7")
+        self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 12, "bold"), bg="#f7f7f7")
         self.lbl_event.pack()
-        self.lbl_sub = tk.Label(header, text="", font=("Segoe UI", 9, "italic"), bg="#f7f7f7", fg="#555")
+        self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 9, "italic"), bg="#f7f7f7", fg="#555")
         self.lbl_sub.pack()
-        self.lbl_turn = tk.Label(header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7", fg=self.themes[self.board_theme]["alert"])
+        self.lbl_turn = tk.Label(self.header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7", fg=self.themes[self.board_theme]["alert"])
         self.lbl_turn.pack()
 
         # 'relief=tk.RIDGE' creates a classic raised decorative edge
@@ -957,15 +967,15 @@ class ChessPuzzleApp(tk.Toplevel):
         self.outer_frame.pack(pady=(20, 5), padx=5)
 
         # The 'inner_border' creates a thin dark inlay line between the frame and the board
-        #self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2)
         self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2, relief=tk.FLAT)
         self.inner_border.pack()
 
         self.canvas = tk.Canvas(self.inner_border, width=self.field_size*8, height=self.field_size*8, bg="white", highlightthickness=0)
         self.canvas.pack(pady=5)
         self.canvas.bind("<Button-1>", self._on_click)
+        self._arrange_layout()
 
-        footer = tk.Frame(self, pady=10)
+        footer = tk.Frame(self.header, pady=10)
         footer.pack(fill=tk.X)
         self.lbl_attempts = tk.Label(footer, text="", font=("Segoe UI", 10, "bold"), fg=self.themes[self.board_theme]["alert"])
         self.lbl_attempts.pack()
@@ -978,6 +988,31 @@ class ChessPuzzleApp(tk.Toplevel):
 
         self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
         self.skip_button.pack(side=tk.LEFT, padx=5)
+
+    def _set_orientation(self, mode):
+        """ Updates orientation, saves to config and rearranges the UI. """
+        self.config_data["orientation"] = mode
+        self._save_config()
+        self._arrange_layout()
+
+    def _arrange_layout(self):
+        """ Arranges the header and board based on portrait or landscape setting. """
+        # English: First, 'forget' the current packing to reset the layout
+        self.header.pack_forget()
+        self.outer_frame.pack_forget()
+
+        orientation = self.config_data.get("orientation", "portrait")
+
+        if orientation == "portrait":
+            # English: Header on top, board below
+            self.header.pack(side=tk.TOP, fill=tk.X, pady=10)
+            self.outer_frame.pack(side=tk.TOP, pady=(10, 5), padx=5)
+        else:
+            # English: Board on the left, header on the right
+            self.outer_frame.pack(side=tk.LEFT, pady=20, padx=(20, 5))
+            self.header.pack(side=tk.LEFT, fill=tk.Y, padx=20, pady=20)
+            # English: Optional - justify header text to the left in landscape
+            self.lbl_overall.config(anchor="w")
 
     def _set_field_size(self, size):
         """ Updates the field size, reloads images at the new scale, and resizes the board. """
