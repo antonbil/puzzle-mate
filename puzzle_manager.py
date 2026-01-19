@@ -1064,8 +1064,33 @@ class ChessPuzzleApp(tk.Toplevel):
             self.board_container.pack(side=tk.LEFT, padx=30, pady=20)
             self.header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        self.update()
         # English: Force refresh
         self.update_idletasks()
+
+    def _update_window_size(self):
+        """ Dynamically calculates the window size based on board size and orientation. """
+        # English: Calculate the width of the board (8 fields + borders)
+        # 24 is for the bd=12 on both sides of the outer_frame
+        board_width = (self.field_size * 8) + 24 + 20  # 20 for extra padding
+
+        orientation = self.config_data.get("orientation", "portrait")
+
+        if orientation == "portrait":
+            # English: In portrait, the width is just the board width
+            new_width = board_width + 40  # some extra padding for margins
+            # English: Height needs to account for the header + board + footer
+            new_height = board_width + 250
+        else:
+            # English: In landscape, width is board + sidebar
+            # We add about 300-400 pixels for a readable sidebar
+            sidebar_width = 350
+            new_width = board_width + sidebar_width
+            # English: Height is mainly the board height plus some margin
+            new_height = board_width + 100
+
+        # English: Apply the new geometry
+        self.geometry(f"{int(new_width)}x{int(new_height)}")
 
     def _set_field_size(self, size):
         """ Updates the field size, reloads images at the new scale, and resizes the board. """
