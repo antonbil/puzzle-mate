@@ -914,9 +914,9 @@ class ChessPuzzleApp(tk.Toplevel):
                 command=lambda s=p_set: self._set_piece_set(s)
             )
 
-            # English: Submenu for Board Size
-            size_m = tk.Menu(settings_m, tearoff=0)
-            settings_m.add_cascade(label=t("board_size"), menu=size_m)
+        # English: Submenu for Board Size
+        size_m = tk.Menu(settings_m, tearoff=0)
+        settings_m.add_cascade(label=t("board_size"), menu=size_m)
 
         # English: Mapping display keys to pixel values
         sizes = [
@@ -977,7 +977,6 @@ class ChessPuzzleApp(tk.Toplevel):
         self.canvas = tk.Canvas(self.inner_border, width=self.field_size*8, height=self.field_size*8, bg="white", highlightthickness=0)
         self.canvas.pack(pady=5)
         self.canvas.bind("<Button-1>", self._on_click)
-        self._arrange_layout()
 
         self.controls_under_board = tk.Frame(self.board_container, pady=10)
         self.controls_under_board.pack(fill=tk.X)
@@ -992,6 +991,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
         self.skip_button.pack(side=tk.LEFT, padx=5)
+        self._arrange_layout()
 
     def _set_orientation(self, mode):
         """ Updates orientation, saves to config and rearranges the UI. """
