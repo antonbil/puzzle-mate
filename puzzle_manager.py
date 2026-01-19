@@ -260,6 +260,8 @@ class PuzzleEngine:
 
     def _load_results(self):
         """ Loads only the results_log from the JSON file. """
+        self.results_log = []
+        self.current_index = 0
         if os.path.exists(self.save_file):
             try:
                 with open(self.save_file, 'r') as f:
@@ -268,8 +270,7 @@ class PuzzleEngine:
                     self.results_log = data.get("results_log", [])
                     self.current_index = data.get("current_index", -1)
             except:
-                self.results_log = []
-                self.current_index = 0
+                pass
         return []
 
     def save_state(self):
