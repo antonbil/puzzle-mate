@@ -948,15 +948,23 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
-        self.header = tk.Frame(self, pady=10, bg="#f7f7f7")
-        self.header.pack(fill=tk.X)
-        self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10), bg="#f7f7f7")
-        self.lbl_overall.pack()
-        self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 12, "bold"), bg="#f7f7f7")
-        self.lbl_event.pack()
-        self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 9, "italic"), bg="#f7f7f7", fg="#555")
-        self.lbl_sub.pack()
-        self.lbl_turn = tk.Label(self.header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7", fg=self.themes[self.board_theme]["alert"])
+        self.header = tk.Frame(self, pady=20, padx=20)
+
+        self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10))
+        self.lbl_overall.pack(pady=5)
+
+        self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 14, "bold"))
+        self.lbl_event.pack(pady=5)
+
+        self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 10, "italic"), fg="#555")
+        self.lbl_sub.pack(pady=5)
+
+        # English: Styled Turn Indicator (The "Badge")
+        # We put it in a frame to give it a nice border/background
+        self.turn_badge = tk.Frame(self.header, padx=10, pady=5, relief=tk.RAISED, bd=1)
+        self.turn_badge.pack(pady=20)
+
+        self.lbl_turn = tk.Label(self.turn_badge, text="", font=("Segoe UI", 11, "bold"))
         self.lbl_turn.pack()
 
         # English: 2. Board Container (The frame that holds both the board and the buttons)
@@ -1000,23 +1008,64 @@ class ChessPuzzleApp(tk.Toplevel):
         self._arrange_layout()
 
     def _arrange_layout(self):
-        """ Arranges the header and board based on portrait or landscape setting. """
-        # English: First, 'forget' the current packing to reset the layout
+        """ Enhanced layout arranger for better visual balance. """
         self.header.pack_forget()
         self.board_container.pack_forget()
 
         orientation = self.config_data.get("orientation", "portrait")
 
+        # English: Get theme colors
+        bg_frame = self.current_theme.get("frame", "#f7f7f7")
+        text_color = "#000000"  # You can adjust based on theme
+
         if orientation == "portrait":
-            # English: Header on top, board below
-            self.header.pack(side=tk.TOP, fill=tk.X, pady=10)
-            self.board_container.pack(side=tk.TOP, pady=(10, 5), padx=5)
+            # English: 1. PORTRAIT - COMPACT DESIGN
+            self.header.config(bg="#f7f7f7", pady=5)  # Minimal padding for the header frame
+
+            # English: Reset labels to a tight vertical stack
+            self.lbl_overall.pack(pady=1)
+            self.lbl_event.pack(pady=1)
+            self.lbl_sub.pack(pady=1)
+            self.turn_badge.pack(pady=5)  # Slightly more for the badge to let it breathe
+
+            # English: Portrait colors (Light/Neutral)
+            for widget in self.header.winfo_children():
+                if isinstance(widget, tk.Label):
+                    widget.config(bg="#f7f7f7", fg="#000000")
+
+            self.turn_badge.config(bg="#eeeeee", relief=tk.GROOVE)
+            self.lbl_turn.config(bg="#eeeeee", fg="#000000")
+
+            # English: Final packing for portrait
+            self.header.pack(side=tk.TOP, fill=tk.X)
+            self.board_container.pack(side=tk.TOP, pady=5)
+
         else:
-            # English: Board on the left, header on the right
-            self.board_container.pack(side=tk.LEFT, pady=20, padx=(20, 5))
-            self.header.pack(side=tk.LEFT, fill=tk.Y, padx=20, pady=20)
-            # English: Optional - justify header text to the left in landscape
-            self.lbl_overall.config(anchor="w")
+            # English: 2. LANDSCAPE - SPACIOUS DASHBOARD
+            self.header.config(bg=bg_frame, pady=40)  # Large padding for the sidebar
+
+            # English: Spread out the labels with more air
+            self.lbl_overall.pack(pady=(20, 10))
+            self.lbl_event.pack(pady=10)
+            self.lbl_sub.pack(pady=10)
+            self.turn_badge.pack(pady=40)
+
+            # English: Update labels to match the darker board-frame background
+            # Note: adjust 'fg' (foreground) based on your theme's brightness
+            for widget in self.header.winfo_children():
+                if isinstance(widget, tk.Label):
+                    widget.config(bg=bg_frame, fg="white")
+
+            # English: Style the turn badge as a prominent UI element
+            self.turn_badge.config(bg="#333333", bd=2, relief=tk.RAISED)
+            self.lbl_turn.config(bg="#333333", fg="white")
+
+            # English: Final packing for landscape
+            self.board_container.pack(side=tk.LEFT, padx=30, pady=20)
+            self.header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # English: Force refresh
+        self.update_idletasks()
 
     def _set_field_size(self, size):
         """ Updates the field size, reloads images at the new scale, and resizes the board. """
@@ -1082,6 +1131,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.skip_button.config(text=self.t("skip"))
         self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"])
         self.lbl_turn.config(fg=self.themes[self.board_theme]["alert"])
+        self._arrange_layout()
 
     # --- BOARD RENDERING ---
 
