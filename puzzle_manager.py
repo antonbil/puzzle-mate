@@ -948,59 +948,50 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
-        # English: 1. Create the Header (contains event and game info)
         self.header = tk.Frame(self, pady=10, bg="#f7f7f7")
+        self.header.pack(fill=tk.X)
         self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10), bg="#f7f7f7")
         self.lbl_overall.pack()
         self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 12, "bold"), bg="#f7f7f7")
         self.lbl_event.pack()
         self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 9, "italic"), bg="#f7f7f7", fg="#555")
         self.lbl_sub.pack()
-        self.lbl_turn = tk.Label(self.header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7",
-                                 fg=self.themes[self.board_theme]["alert"])
+        self.lbl_turn = tk.Label(self.header, text="", font=("Segoe UI", 10, "bold"), bg="#f7f7f7", fg=self.themes[self.board_theme]["alert"])
         self.lbl_turn.pack()
 
-        # English: 2. Create a Board Container to hold the board AND the controls below it
+        # English: 2. Board Container (The frame that holds both the board and the buttons)
+        # Important: We don't pack it here, _arrange_layout will do that.
         self.board_container = tk.Frame(self)
 
-        # English: The Board (Outer Frame)
+        # 'relief=tk.RIDGE' creates a classic raised decorative edge
         self.outer_frame = tk.Frame(self.board_container,
-                                    bg=self.current_theme["frame"],
-                                    bd=12,
-                                    relief=tk.RIDGE)
-        self.outer_frame.pack(pady=(10, 5), padx=5)
+                                    bg=self.current_theme["frame"],  # A warm wood-like brown
+                                    bd=12,  # Thickness of the decorative frame
+                                    relief=tk.RIDGE)  # Decorative 3D border style
+        self.outer_frame.pack(pady=(20, 5), padx=5)
 
+        # The 'inner_border' creates a thin dark inlay line between the frame and the board
         self.inner_border = tk.Frame(self.outer_frame, bg=self.current_theme["inner_line"], bd=2, relief=tk.FLAT)
         self.inner_border.pack()
 
-        self.canvas = tk.Canvas(self.inner_border, width=self.field_size * 8, height=self.field_size * 8, bg="white",
-                                highlightthickness=0)
+        self.canvas = tk.Canvas(self.inner_border, width=self.field_size*8, height=self.field_size*8, bg="white", highlightthickness=0)
         self.canvas.pack(pady=5)
         self.canvas.bind("<Button-1>", self._on_click)
+        self._arrange_layout()
 
-        # English: 3. Create a frame for elements BELOW the board (Attempts and Skip button)
-        # This ensures they stay together horizontally
         self.controls_under_board = tk.Frame(self.board_container, pady=10)
         self.controls_under_board.pack(fill=tk.X)
-
-        # English: Label for attempts (left side of the controls frame)
-        self.lbl_attempts = tk.Label(self.controls_under_board, text="", font=("Segoe UI", 10, "bold"),
-                                     fg=self.themes[self.board_theme]["alert"])
+        self.lbl_attempts = tk.Label(self.controls_under_board, text="", font=("Segoe UI", 10, "bold"), fg=self.themes[self.board_theme]["alert"])
         self.lbl_attempts.pack(side=tk.LEFT, padx=(20, 10))
 
-        # English: Container for buttons (right side of the controls frame)
         self.btn_container = tk.Frame(self.controls_under_board)
         self.btn_container.pack(side=tk.RIGHT, padx=20)
-
         self.btn_hint = ttk.Button(self.btn_container, text="Hint", command=self._show_hint)
         self.btn_hint.pack(side=tk.LEFT, padx=5)
         self.btn_hint.pack_forget()
 
-        self.skip_button = ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip)
+        self.skip_button = (ttk.Button(self.btn_container, text=self.t("skip"), command=self._skip))
         self.skip_button.pack(side=tk.LEFT, padx=5)
-
-        # English: Finally, call the layout arranger
-        self._arrange_layout()
 
     def _set_orientation(self, mode):
         """ Updates orientation, saves to config and rearranges the UI. """
@@ -1012,17 +1003,17 @@ class ChessPuzzleApp(tk.Toplevel):
         """ Arranges the header and board based on portrait or landscape setting. """
         # English: First, 'forget' the current packing to reset the layout
         self.header.pack_forget()
-        self.outer_frame.pack_forget()
+        self.board_container.pack_forget()
 
         orientation = self.config_data.get("orientation", "portrait")
 
         if orientation == "portrait":
             # English: Header on top, board below
             self.header.pack(side=tk.TOP, fill=tk.X, pady=10)
-            self.outer_frame.pack(side=tk.TOP, pady=(10, 5), padx=5)
+            self.board_container.pack(side=tk.TOP, pady=(10, 5), padx=5)
         else:
             # English: Board on the left, header on the right
-            self.outer_frame.pack(side=tk.LEFT, pady=20, padx=(20, 5))
+            self.board_container.pack(side=tk.LEFT, pady=20, padx=(20, 5))
             self.header.pack(side=tk.LEFT, fill=tk.Y, padx=20, pady=20)
             # English: Optional - justify header text to the left in landscape
             self.lbl_overall.config(anchor="w")
