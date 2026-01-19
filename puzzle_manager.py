@@ -51,7 +51,7 @@ TRANSLATIONS = {
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
         "black_turn": "ZWART AAN ZET", "no_puzzles": "Geen puzzels actief",
         "load_pgn_msg": "Laad een PGN bestand via Bestand -> Laden",
-        "file": "Bestand", "view": "Beeld", "history": "Geschiedenis", "progress": "Voortgang",
+        "file": "Bestand", "view": "Tools", "history": "Geschiedenis", "progress": "Voortgang",
         "language": "Taal", "dutch": "Nederlands", "english": "English", "reset": "Voortgang wissen...",
         "all_finished": "Alle puzzels voltooid!", "confirm_skip": "Oplossing bekijken? (-5 pnt)",
         "reset_title": "Voortgang Wissen", "reset_msg": "Weet u zeker dat u de voortgang voor '{}' wilt wissen?",
@@ -948,16 +948,27 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
-        self.header = tk.Frame(self, pady=20, padx=20)
+        # English: The very outer background (visible during transitions)
+        self.config(bg="#dcdcdc")
 
+        # English: The light border frame around the entire app
+        self.master_container = tk.Frame(self, bg="#f0f0f0", bd=2, relief=tk.FLAT)
+
+        # English: Sidebar/Header (we will style this in _arrange_layout)
+        self.header = tk.Frame(self.master_container, pady=20, padx=20)
+
+        # English: Labels inside the header
         self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10))
-        self.lbl_overall.pack(pady=5)
+        self.lbl_overall.pack()
+        self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 12, "bold"))
+        self.lbl_event.pack()
+        self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 9, "italic"))
+        self.lbl_sub.pack()
 
-        self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 14, "bold"))
-        self.lbl_event.pack(pady=5)
-
-        self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 10, "italic"), fg="#555")
-        self.lbl_sub.pack(pady=5)
+        # English: The "Black Badge" Turn Indicator
+        self.turn_badge = tk.Frame(self.header, padx=15, pady=8, relief=tk.RAISED, bd=2)
+        self.lbl_turn = tk.Label(self.turn_badge, text="", font=("Segoe UI", 11, "bold"))
+        self.lbl_turn.pack()
 
         # English: Styled Turn Indicator (The "Badge")
         # We put it in a frame to give it a nice border/background
@@ -969,7 +980,7 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # English: 2. Board Container (The frame that holds both the board and the buttons)
         # Important: We don't pack it here, _arrange_layout will do that.
-        self.board_container = tk.Frame(self)
+        self.board_container = tk.Frame(self.master_container, bg="#f0f0f0")
 
         # 'relief=tk.RIDGE' creates a classic raised decorative edge
         self.outer_frame = tk.Frame(self.board_container,
@@ -1008,89 +1019,105 @@ class ChessPuzzleApp(tk.Toplevel):
         self._arrange_layout()
 
     def _arrange_layout(self):
-        """ Enhanced layout arranger for better visual balance. """
+        """ Restores the dashboard look with a protective outer border. """
         self.header.pack_forget()
         self.board_container.pack_forget()
+        self.master_container.pack_forget()
 
         orientation = self.config_data.get("orientation", "portrait")
-
-        # English: Get theme colors
         bg_frame = self.current_theme.get("frame", "#f7f7f7")
-        text_color = "#000000"  # You can adjust based on theme
+        board_px = (self.field_size * 8) + 50
 
         if orientation == "portrait":
-            # English: 1. PORTRAIT - COMPACT DESIGN
-            self.header.config(bg="#f7f7f7", pady=5)  # Minimal padding for the header frame
+            # English: Use very small paddings (pady) to save vertical space
+            content_w = board_px + 40
+            content_h = board_px + 180  # English: Reduced height estimate
 
-            # English: Reset labels to a tight vertical stack
-            self.lbl_overall.pack(pady=1)
-            self.lbl_event.pack(pady=1)
-            self.lbl_sub.pack(pady=1)
-            self.turn_badge.pack(pady=5)  # Slightly more for the badge to let it breathe
+            self.header.config(bg="#f0f0f0", pady=2)  # Minimal padding for the header frame
 
-            # English: Portrait colors (Light/Neutral)
-            for widget in self.header.winfo_children():
-                if isinstance(widget, tk.Label):
-                    widget.config(bg="#f7f7f7", fg="#000000")
+            # English: Stack labels with 0 or 1 pixel padding
+            self.lbl_overall.pack(side=tk.TOP, pady=0)
+            self.lbl_event.pack(side=tk.TOP, pady=0)
+            self.lbl_sub.pack(side=tk.TOP, pady=0)
 
-            self.turn_badge.config(bg="#eeeeee", relief=tk.GROOVE)
-            self.lbl_turn.config(bg="#eeeeee", fg="#000000")
+            # English: The badge gets just enough space to not touch the text
+            self.turn_badge.config(bg="#333333", bd=1, relief=tk.SOLID)
+            self.turn_badge.pack(side=tk.TOP, pady=4)
+            self.lbl_turn.config(bg="#333333", fg="white", font=("Segoe UI", 9, "bold"))
 
-            # English: Final packing for portrait
+            # English: Colors for portrait
+            for lbl in [self.lbl_overall, self.lbl_event, self.lbl_sub]:
+                lbl.config(bg="#f0f0f0", fg="black")
+
             self.header.pack(side=tk.TOP, fill=tk.X)
-            self.board_container.pack(side=tk.TOP, pady=5)
-
+            self.board_container.pack(side=tk.TOP, pady=2)
         else:
-            # English: 2. LANDSCAPE - SPACIOUS DASHBOARD
-            self.header.config(bg=bg_frame, pady=40)  # Large padding for the sidebar
+            # English: 2. LANDSCAPE (Grey Board Area vs Dark Sidebar)
+            sidebar_w = 350
+            content_w = board_px + sidebar_w + 20
+            content_h = board_px + 80
 
-            # English: Spread out the labels with more air
-            self.lbl_overall.pack(pady=(20, 10))
-            self.lbl_event.pack(pady=10)
-            self.lbl_sub.pack(pady=10)
-            self.turn_badge.pack(pady=40)
+            # English: Sidebar stays dark/wood-toned
+            self.header.config(bg=bg_frame, pady=30)
 
-            # English: Update labels to match the darker board-frame background
-            # Note: adjust 'fg' (foreground) based on your theme's brightness
-            for widget in self.header.winfo_children():
-                if isinstance(widget, tk.Label):
-                    widget.config(bg=bg_frame, fg="white")
+            # English: Board container becomes grey to create a visual break
+            bg_grey = "#e0e0e0"  # English: A clean, neutral grey
+            self.board_container.config(bg=bg_grey)
+            self.controls_under_board.config(bg=bg_grey)
 
-            # English: Style the turn badge as a prominent UI element
-            self.turn_badge.config(bg="#333333", bd=2, relief=tk.RAISED)
-            self.lbl_turn.config(bg="#333333", fg="white")
+            # English: Styles for labels in their respective areas
+            for lbl in [self.lbl_overall, self.lbl_event, self.lbl_sub]:
+                lbl.config(bg=bg_frame, fg="white")
 
-            # English: Final packing for landscape
-            self.board_container.pack(side=tk.LEFT, padx=30, pady=20)
+            self.lbl_attempts.config(bg=bg_grey, fg="black")  # Counter on grey needs dark text
+
+            # English: Dashboard spacing
+            self.lbl_overall.pack(side=tk.TOP, pady=(20, 10))
+            self.lbl_event.pack(side=tk.TOP, pady=10)
+            self.lbl_sub.pack(side=tk.TOP, pady=10)
+            self.turn_badge.pack(side=tk.TOP, pady=30)
+
+            # English: Pack with distinct zones
+            self.board_container.pack(side=tk.LEFT, fill=tk.Y, padx=(1, 0))
             self.header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # English: Final assembly with a very thin white margin
+        self.master_container.config(width=content_w, height=content_h)
+        self.master_container.pack(expand=True, padx=5, pady=5)
+
+        self._update_window_size(content_w + 10, content_h + 10)
         self.update()
-        # English: Force refresh
-        self.update_idletasks()
 
-    def _update_window_size(self):
-        """ Dynamically calculates the window size based on board size and orientation. """
-        # English: Calculate the width of the board (8 fields + borders)
-        # 24 is for the bd=12 on both sides of the outer_frame
-        board_width = (self.field_size * 8) + 24 + 20  # 20 for extra padding
+    def _update_window_size(self, content_w, content_h):
+        """
+        Adjusts the physical window geometry based on the calculated content size.
+        Includes extra padding for the 'border frame' effect.
+        """
+        # English: Add extra padding for the master_container margins (e.g., 40px total)
+        total_w = content_w + 40
+        total_h = content_h + 40
 
-        orientation = self.config_data.get("orientation", "portrait")
+        # English: Get screen dimensions to prevent the window from being larger than the display
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
 
-        if orientation == "portrait":
-            # English: In portrait, the width is just the board width
-            new_width = board_width + 40  # some extra padding for margins
-            # English: Height needs to account for the header + board + footer
-            new_height = board_width + 250
-        else:
-            # English: In landscape, width is board + sidebar
-            # We add about 300-400 pixels for a readable sidebar
-            sidebar_width = 350
-            new_width = board_width + sidebar_width
-            # English: Height is mainly the board height plus some margin
-            new_height = board_width + 100
+        # English: Ensure we don't exceed screen limits (important for Chromebooks)
+        final_w = min(total_w, screen_w - 50)
+        final_h = min(total_h, screen_h - 100)
 
-        # English: Apply the new geometry
-        self.geometry(f"{int(new_width)}x{int(new_height)}")
+        # English: Update geometry only if not in a 'zoomed' or 'fullscreen' state
+        # to avoid the "double title bar" glitch on ChromeOS.
+        state = self.wm_state()
+        if state != "zoomed" and not self.attributes("-fullscreen"):
+            self.geometry(f"{int(final_w)}x{int(final_h)}")
+
+        # English: Center the window on the screen for a professional look
+        # (Optional: only if you want the window to jump to the middle)
+        # x = (screen_w // 2) - (final_w // 2)
+        # y = (screen_h // 2) - (final_h // 2)
+        # self.geometry(f"+{int(x)}+{int(y)}")
+
+        self.update()  # English: Force the window manager to apply changes immediately
 
     def _set_field_size(self, size):
         """ Updates the field size, reloads images at the new scale, and resizes the board. """
