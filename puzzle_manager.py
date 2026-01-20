@@ -356,9 +356,11 @@ class PuzzleEngine:
 class HistoryDetailWindow(tk.Toplevel):
     """ A window to review a completed puzzle with move highlighting and board markers. """
 
-    def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None, remarks = ""):
+    def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None, remarks = "", config=None):
         super().__init__(parent)
         self.parent = parent
+        self.config_data = config
+        self.field_size = self.config_data.get("field_size", 70)  * 5 // 6
         self.piece_set = piece_set
         self.board_theme = board_theme
         self.themes = themes
@@ -386,7 +388,9 @@ class HistoryDetailWindow(tk.Toplevel):
         self._load_images()
 
         # Setup board logic: start from FEN
-        self.review_board = chess.Board(puzzle['fen'])
+        fen_ = puzzle['fen']
+        self.review_board = chess.Board(fen_)
+        self.initial_fen = fen_
         # Apply initial opponent mistake immediately
         if puzzle['initial_move']:
             self.review_board.push(puzzle['initial_move'])
@@ -417,25 +421,49 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def _load_images(self):
         """ Load pieces to fit 50x50 squares. """
-        self.piece_images = load_images(self.piece_set, 50)
+        self.piece_images = load_images(self.piece_set, self.field_size)
 
     def _setup_ui(self):
-        self.canvas = tk.Canvas(self, width=400, height=400, bg="white", highlightthickness=0)
+        # 1. Add a Menu Bar
+        self.menu_bar = tk.Menu(self)
+        self.config(menu=self.menu_bar)
+
+        # File menu with Close option
+        file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label=self.t("file") or "File", menu=file_menu)
+        file_menu.add_command(label=self.t("close"), command=self.destroy)
+
+        # 2. Board Canvas
+        self.canvas = tk.Canvas(
+            self,
+            width=8 * self.field_size,
+            height=8 * self.field_size,
+            bg="white",
+            highlightthickness=0
+        )
         self.canvas.pack(pady=10, padx=10)
 
-        # Move List using Text widget for formatting
-        self.move_text = tk.Text(self, height=3, width=50, font=("Consolas", 10),
-                                 bg="#f0f0f0", relief=tk.FLAT, state=tk.DISABLED)
-        self.move_text.pack(pady=5, padx=10)
-        self.move_text.tag_configure("active", font=("Consolas", 10, "bold"), foreground="#1565c0",
-                                     background="#d1e3ff")
+        # 3. Enhanced Move List Container (with Word Wrap)
+        # We use a Text widget but make it look like a Frame
+        self.move_container = tk.Text(
+            self,
+            height=4,
+            bg="#f0f0f0",
+            relief=tk.FLAT,
+            padx=10,
+            pady=10,
+            wrap=tk.WORD,
+            state=tk.DISABLED,
+            cursor="arrow"
+        )
+        self.move_container.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
+        # 4. Navigation Buttons (Close is now in the menu)
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=10)
 
-        ttk.Button(btn_frame, text="< "+self.t("back"), command=self._prev_move).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text=self.t("forward")+" >", command=self._next_move).pack(side=tk.LEFT, padx=5)
-        ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=5)
+        ttk.Button(btn_frame, text="< " + self.t("back"), command=self._prev_move).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text=self.t("forward") + " >", command=self._next_move).pack(side=tk.LEFT, padx=5)
 
     def _update_display(self):
         """ Sync board and text highlighting. """
@@ -447,18 +475,60 @@ class HistoryDetailWindow(tk.Toplevel):
 
         self.refresh_board()
 
-        self.move_text.config(state=tk.NORMAL)
-        self.move_text.delete("1.0", tk.END)
-        self.move_text.insert(tk.END, "Solution: ")
+        # Clear the container
+        for widget in self.move_container.winfo_children():
+            widget.destroy()
 
-        for i, san in enumerate(self.san_list):
-            start_idx = self.move_text.index(tk.INSERT)
-            self.move_text.insert(tk.END, san)
-            end_idx = self.move_text.index(tk.INSERT)
-            if i == self.current_step - 1:
-                self.move_text.tag_add("active", start_idx, end_idx)
-            self.move_text.insert(tk.END, " ")
-        self.move_text.config(state=tk.DISABLED)
+        # English: Regex pattern from your instructions
+        pattern = r"(\d+\.+\s?)|(\(.+?\))|(\{.+?\})|([^\s(){}\[\]]+)"
+        full_text = " ".join(self.san_list)  # Or your full PGN string
+
+        # English: Track move index to know which move to activate on click
+        move_counter = 0
+
+        for match in re.finditer(pattern, full_text):
+            token = match.group(0).strip()
+            if not token: continue
+
+            # English: Determine style based on token type
+            is_move = False
+            fg = "black"
+            font = ("Consolas", 10)
+
+            if token[0].isdigit():  # Move numbers (1., 2., etc)
+                fg = "gray"
+            elif token.startswith('(') or token.startswith('{'):  # Comments/Alts
+                fg = "green"
+                font = ("Consolas", 10, "italic")
+            else:  # Actual moves (e4, Nf3, etc)
+                is_move = True
+                move_counter += 1
+
+            lbl = tk.Label(self.move_container, text=token, font=font,
+                           fg=fg, bg="#f0f0f0", cursor="hand2" if is_move else "")
+            lbl.pack(side=tk.LEFT)
+
+            # English: Highlight active move
+            if is_move and move_counter == self.current_step:
+                lbl.config(bg="#d1e3ff", fg="#1565c0", font=("Consolas", 10, "bold"))
+
+            # English: Bind click event only to moves
+            if is_move:
+                # We use a default argument in lambda to capture the current index
+                lbl.bind("<Button-1>", lambda e, idx=move_counter: self._jump_to_move(idx))
+
+        # Add a spacer to prevent labels from stretching weirdly
+        tk.Label(self.move_container, bg="#f0f0f0").pack(side=tk.LEFT, expand=True)
+
+    def _jump_to_move(self, index):
+        """ Sets the puzzle state to a specific move index. """
+        self.current_step = index
+        # English: Update the board state based on the moves list up to this index
+        self.review_board = chess.Board(self.initial_fen)  # Or wherever your start is
+        for i in range(index):
+            self.review_board.push(self.solution_moves[i])
+
+        self._update_display()
 
     def _next_move(self):
         if self.current_step < len(self.solution_moves):
@@ -474,7 +544,7 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def refresh_board(self):
         self.canvas.delete("all")
-        size = 400 // 8
+        size = self.field_size
         colors = self.themes[self.board_theme]
         for r in range(8):
             for c in range(8):
@@ -636,7 +706,8 @@ class HistoryWindow(tk.Toplevel):
         if selected:
             val = self.tree.item(selected[0], "values")
             HistoryDetailWindow(self, self.puzzles[int(val[0])], int(val[2]), t=self.parent.t,
-                                board_theme=self.parent.board_theme, themes=self.parent.themes, piece_set=self.piece_set)
+                                board_theme=self.parent.board_theme, themes=self.parent.themes, piece_set=self.piece_set,
+                                config=self.parent.config_data)
 
 
 class ProgressWindow(tk.Toplevel):
@@ -1353,7 +1424,8 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # Show the review window
         p = self.engine.puzzles[self.engine.current_index]
-        review = HistoryDetailWindow(self, p, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes, piece_set=self.piece_set, remarks=remarks)
+        review = HistoryDetailWindow(self, p, result_score, t=self.t, board_theme=self.board_theme, themes=self.themes,
+                                     piece_set=self.piece_set, remarks=remarks, config=self.config_data)
         self.wait_window(review)
         self.load_puzzle()
 
