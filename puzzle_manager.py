@@ -490,7 +490,7 @@ class HistoryDetailWindow(tk.Toplevel):
             f, r = chess.square_file(square), chess.square_rank(square)
             col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
             img = self.piece_images.get(piece.symbol())
-            if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW)
+            if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW, tags=("piece",))
 
 
 # --- HISTORY LIST WINDOW ---
@@ -742,6 +742,7 @@ class ChessPuzzleApp(tk.Toplevel):
         super().__init__()
 
         # 1. Load configuration first (to access recent files)
+        self.drawn_pieces = {}
         self.config_data = self._load_config()
         self.field_size = self.config_data.get("field_size", 70)
         self.piece_set = self.config_data.get("piece_set", "staunty")
@@ -1213,13 +1214,15 @@ class ChessPuzzleApp(tk.Toplevel):
 
                 self.canvas.create_rectangle(c * size, r * size, (c + 1) * size, (r + 1) * size, fill=color,
                                              outline=outline, width=width)
-
+        self.drawn_pieces = {}
         if has_board:
             for sq, pc in self.board.piece_map().items():
                 f, r = chess.square_file(sq), chess.square_rank(sq)
                 col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
                 img = self.piece_images.get(pc.symbol())
-                if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW)
+                if img:
+                    piece_id =self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW, tags=("piece",))
+                    self.drawn_pieces[sq] = piece_id
 
     def _confirm_reset(self):
         """ Asks for confirmation and resets the engine state. """
@@ -1351,11 +1354,11 @@ class ChessPuzzleApp(tk.Toplevel):
                     self.selected_square).piece_type == chess.PAWN:
                 if (not self.is_flipped and r_idx == 7) or (
                         self.is_flipped and r_idx == 0): move.promotion = chess.QUEEN
-            self._handle_move(move)
+            self._handle_move(move, self.selected_square, sq)
             self.selected_square = None
-            self.refresh_board()
+            #self.refresh_board()
 
-    def _handle_move(self, move):
+    def _handle_move(self, move, from_sq, to_sq):
         p = self.engine.puzzles[self.engine.current_index]
         if self.solve_step >= len(p['solution']):
             puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
@@ -1375,6 +1378,7 @@ class ChessPuzzleApp(tk.Toplevel):
                 self._show_solution_and_continue(puzzle_result,self.t("solved"))
             else:
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
+            self.refresh_board()
         else:
             self.attempts_left -= 1
             self.btn_hint.pack(side=tk.LEFT, padx=5)
@@ -1382,7 +1386,48 @@ class ChessPuzzleApp(tk.Toplevel):
                 #messagebox.showerror(self.t("failed"), self.t("out_of_attempts"))
                 self._show_solution_and_continue(0, self.t("out_of_attempts"))
             else:
-                self.update_status_display()
+                self._animate_wrong_move(from_sq, to_sq)
+
+                # English: Update attempts
+                self.lbl_attempts.config(text=f"Tries: {self.attempts_left}", fg="red")
+                # English: Reset color after a short delay
+                self.after(500, lambda: self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"]))
+
+    def _animate_wrong_move(self, from_sq, to_sq):
+        # English: Get the canvas ID directly from our map
+        piece_id = self.drawn_pieces.get(from_sq)
+        if piece_id is None: return
+
+        # English: Calculate pixel distances
+        def get_pos(sq):
+            f, r = chess.square_file(sq), chess.square_rank(sq)
+            col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
+            return col * self.field_size, row * self.field_size
+
+        # English: Where the piece should have stayed vs where it is now
+        # Note: In _on_click, the board isn't updated yet for a wrong move,
+        # but the user sees the piece at 'to_sq' because we handle the drag/click.
+        # So we move it from 'to_sq' back to 'from_sq'.
+
+        start_x, start_y = get_pos(from_sq)
+        end_x, end_y = get_pos(to_sq)
+
+        # English: We first snap the piece to the 'wrong' square to ensure
+        # the user sees it "land" before it flies back.
+        self.canvas.coords(piece_id, end_x, end_y)
+
+        steps = 10
+        dx = (start_x - end_x) / steps
+        dy = (start_y - end_y) / steps
+
+        def step(count):
+            if count < steps:
+                self.canvas.move(piece_id, dx, dy)
+                self.after(60, lambda: step(count + 1))
+            else:
+                self.refresh_board()  # English: Final clean redraw
+
+        step(0)
 
     def _opp_move(self, move):
         self.board.push(move)
