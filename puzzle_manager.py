@@ -1,6 +1,7 @@
 
 
 import chess
+import re
 import chess.pgn
 import tkinter as tk
 from tkinter import messagebox, ttk, filedialog
@@ -317,6 +318,8 @@ class PuzzleEngine:
                     p_list.append({
                         'fen': game.headers.get("FEN"),
                         'initial_move': initial_move,
+                        'white': w,
+                        'black': b,
                         'solution': solution,
                         'display_name': display_name,
                         'date': game.headers.get("Date", ""),
@@ -959,7 +962,8 @@ class ChessPuzzleApp(tk.Toplevel):
         # English: Sidebar/Header (we will style this in _arrange_layout)
         self.header = tk.Frame(self.master_container, pady=20, padx=20)
 
-        # English: Labels inside the header
+        # Labels inside the header
+        self.lbl_rating = tk.Label(self.header, text="", font=("Segoe UI", 10, "bold"))
         self.lbl_overall = tk.Label(self.header, text="", font=("Segoe UI", 10))
         self.lbl_overall.pack()
         self.lbl_event = tk.Label(self.header, text="", font=("Segoe UI", 12, "bold"))
@@ -1038,6 +1042,8 @@ class ChessPuzzleApp(tk.Toplevel):
             self.header.config(bg="#f0f0f0", pady=2)  # Minimal padding for the header frame
 
             # English: Stack labels with 0 or 1 pixel padding
+            self.lbl_rating.config(bg="#f0f0f0", fg="#555555")
+            self.lbl_rating.pack(side=tk.TOP, pady=0)
             self.lbl_overall.pack(side=tk.TOP, pady=0)
             self.lbl_event.pack(side=tk.TOP, pady=0)
             self.lbl_sub.pack(side=tk.TOP, pady=0)
@@ -1074,6 +1080,8 @@ class ChessPuzzleApp(tk.Toplevel):
             self.lbl_attempts.config(bg=bg_grey, fg="black")  # Counter on grey needs dark text
 
             # English: Dashboard spacing
+            self.lbl_rating.config(bg=bg_frame, fg="#ffcc00")  # Gold color for rating looks great on dark
+            self.lbl_rating.pack(side=tk.TOP, pady=5)
             self.lbl_overall.pack(side=tk.TOP, pady=(20, 10))
             self.lbl_event.pack(side=tk.TOP, pady=10)
             self.lbl_sub.pack(side=tk.TOP, pady=10)
@@ -1271,6 +1279,42 @@ class ChessPuzzleApp(tk.Toplevel):
         if puzzle['date'] and puzzle['date'] not in ["", "????", "?.?.?", "????.??.??"]: sub_info.append(
             f"[{puzzle['date']}]")
         self.lbl_sub.config(text=" | ".join(sub_info))
+        puzzle_data = puzzle
+        # 1. Try standard Elo tags first
+        white_elo = puzzle_data.get("WhiteElo", "")
+        black_elo = puzzle_data.get("BlackElo", "")
+
+        rating = ""
+        if white_elo and white_elo != "?":
+            rating = f"Rating: {white_elo}"
+        elif black_elo and black_elo != "?":
+            rating = f"Rating: {black_elo}"
+        else:
+            # 2. Fallback: Scan player names for patterns like "(2121)"
+            # This regex looks for digits inside parentheses
+            pattern = r"\((\d+)\)"
+
+            white_name = puzzle_data.get("white", "")
+            black_name = puzzle_data.get("black", "")
+
+            # Check White name first, then Black
+            match_w = re.search(pattern, white_name)
+            match_b = re.search(pattern, black_name)
+
+            if match_w:
+                rating = f"Rating: {match_w.group(1)}"
+            elif match_b:
+                rating = f"Rating: {match_b.group(1)}"
+
+        # 3. Update the display
+        if rating:
+            self.lbl_rating.config(text=rating)
+            # Ensure it is visible and placed correctly
+            self.lbl_rating.pack(before=self.lbl_sub,
+                                 pady=2 if self.config_data.get("orientation") == "portrait" else 5)
+        else:
+            # Hide the label if no rating is found to save space
+            self.lbl_rating.pack_forget()
 
         if puzzle['initial_move']:
             self.board.push(puzzle['initial_move'])
