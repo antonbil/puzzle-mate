@@ -193,6 +193,39 @@ def load_svg_piece(filename, size):
     return ImageTk.PhotoImage(image)
 
 
+def _animate_piece(self, from_sq, to_sq, callback):
+    """ Universal animation handler with an animation lock. """
+    self.is_animating = True
+
+    piece_id = self.drawn_pieces.get(from_sq)
+    if not piece_id:
+        self.is_animating = False
+        callback()
+        return
+
+    def get_pos(sq):
+        f, r = chess.square_file(sq), chess.square_rank(sq)
+        col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
+        return col * self.field_size, row * self.field_size
+
+    start_x, start_y = get_pos(from_sq)
+    target_x, target_y = get_pos(to_sq)
+    self.canvas.tag_raise(piece_id)
+
+    steps = 12
+    dx = (target_x - start_x) / steps
+    dy = (target_y - start_y) / steps
+
+    def step(count):
+        if count < steps:
+            self.canvas.move(piece_id, dx, dy)
+            self.after(12, lambda: step(count + 1))
+        else:
+            self.is_animating = False
+            callback()
+
+    step(0)
+
 def load_images(piece_set, size=60):
     piece_images = {}
     # Use the selected piece_set)
@@ -358,7 +391,9 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def __init__(self, parent, puzzle,  score=None, t=None, board_theme=None, themes=None, piece_set=None, remarks = "", config=None):
         super().__init__(parent)
+        self.drawn_pieces = {}
         self.parent = parent
+        self.is_animating = False
         self.config_data = config
         self.field_size = self.config_data.get("field_size", 70)  * 5 // 6
         self.piece_set = piece_set
@@ -530,20 +565,52 @@ class HistoryDetailWindow(tk.Toplevel):
         self.move_text_container.config(state=tk.DISABLED)
 
     def _jump_to_move(self, index):
-        """ Sets the puzzle state to a specific move index. """
+        """
+        Jumps to a specific move index, animating the final move for visual clarity.
+        """
+        if getattr(self, "is_animating", False):
+            return
+        # 1. Update the current step
         self.current_step = index
-        # English: Update the board state based on the moves list up to this index
-        self.review_board = chess.Board(self.initial_fen)  # Or wherever your start is
-        for i in range(index):
-            self.review_board.push(self.solution_moves[i])
 
-        self._update_display()
+        # 2. Rebuild the board to the state BEFORE the clicked move
+        # If index is 5, we want the board at step 4, then animate move 5.
+        # self.board = chess.Board(self.initial_fen)
+        # for i in range(index - 1):
+        #     self.board.push(self.solution_moves[i])
+
+        # 3. Get the move that needs to be animated
+        if index > 0:
+            move_to_animate = self.solution_moves[index - 1]
+            from_sq = move_to_animate.from_square
+            to_sq = move_to_animate.to_square
+
+            # Draw the board at the 'n-1' state so the piece is at its starting position
+            self.review_board = chess.Board(self.initial_fen)  # Or wherever your start is
+            for i in range(index - 1):
+                self.review_board.push(self.solution_moves[i])
+            self.current_step = index - 1
+            self._update_display()
+
+            # Define what happens when the animation finishes
+            def finalize_jump():
+                self.review_board.push(move_to_animate)
+                self.last_move_squares = [from_sq, to_sq]
+                self.current_step = index
+                self._update_display()  # This redraws everything and highlights the text
+
+            # Start the universal animation
+            # Note: If from_sq to to_sq is the move, we animate it forward
+            _animate_piece(self, from_sq, to_sq, finalize_jump)
+        else:
+            # If we jump to the very beginning (index 0), no animation is needed
+            self.last_move_squares = []
+            self._update_display()
 
     def _next_move(self):
         if self.current_step < len(self.solution_moves):
-            self.review_board.push(self.solution_moves[self.current_step])
             self.current_step += 1
-            self._update_display()
+            self._jump_to_move(self.current_step)
 
     def _prev_move(self):
         if self.current_step > 0:
@@ -567,12 +634,14 @@ class HistoryDetailWindow(tk.Toplevel):
                 width = 3 if sq in self.last_move_squares else 1
                 self.canvas.create_rectangle(c * size, r * size, (c + 1) * size, (r + 1) * size,
                                              fill=base_color, outline=outline, width=width)
-
+        self.drawn_pieces = {}
         for square, piece in self.review_board.piece_map().items():
             f, r = chess.square_file(square), chess.square_rank(square)
             col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
             img = self.piece_images.get(piece.symbol())
-            if img: self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW, tags=("piece",))
+            if img:
+                piece_id = self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW, tags=("piece",))
+                self.drawn_pieces[square] = piece_id
 
 
 # --- HISTORY LIST WINDOW ---
