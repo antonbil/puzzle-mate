@@ -445,7 +445,7 @@ class HistoryDetailWindow(tk.Toplevel):
 
         # 3. Enhanced Move List Container (with Word Wrap)
         # We use a Text widget but make it look like a Frame
-        self.move_container = tk.Text(
+        self.move_text_container = tk.Text(
             self,
             height=4,
             bg="#f0f0f0",
@@ -456,7 +456,7 @@ class HistoryDetailWindow(tk.Toplevel):
             state=tk.DISABLED,
             cursor="arrow"
         )
-        self.move_container.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
+        self.move_text_container.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
         # 4. Navigation Buttons (Close is now in the menu)
         btn_frame = tk.Frame(self)
@@ -466,59 +466,68 @@ class HistoryDetailWindow(tk.Toplevel):
         ttk.Button(btn_frame, text=self.t("forward") + " >", command=self._next_move).pack(side=tk.LEFT, padx=5)
 
     def _update_display(self):
-        """ Sync board and text highlighting. """
+        """ Renders moves as clickable objects using board logic for turn detection. """
+        # Update board markers
         if self.current_step > 0:
             last_m = self.solution_moves[self.current_step - 1]
             self.last_move_squares = [last_m.from_square, last_m.to_square]
         else:
             self.last_move_squares = []
-
         self.refresh_board()
 
-        # Clear the container
-        for widget in self.move_container.winfo_children():
-            widget.destroy()
+        # Clear and prepare the text container
+        self.move_text_container.config(state=tk.NORMAL)
+        self.move_text_container.delete("1.0", tk.END)
 
-        # English: Regex pattern from your instructions
-        pattern = r"(\d+\.+\s?)|(\(.+?\))|(\{.+?\})|([^\s(){}\[\]]+)"
-        full_text = " ".join(self.san_list)  # Or your full PGN string
+        # Use a temporary board to track the turn and move number
+        temp_board = chess.Board(self.initial_fen)
+        is_flipped = not (temp_board.turn == chess.BLACK)
 
-        # English: Track move index to know which move to activate on click
-        move_counter = 0
+        bg_color = "#f0f0f0"
+        active_bg = "#d1e3ff"
+        active_fg = "#1565c0"
+        num_fg = "#999999"
 
-        for match in re.finditer(pattern, full_text):
-            token = match.group(0).strip()
-            if not token: continue
+        for i, move in enumerate(self.solution_moves):
+            # Check whose turn it is BEFORE pushing the move
+            is_white_turn = (temp_board.turn == chess.BLACK)
+            full_move_number = temp_board.fullmove_number
+            move_idx = i + 1
 
-            # English: Determine style based on token type
-            is_move = False
-            fg = "black"
-            font = ("Consolas", 10)
+            # 1. Add Move Number
+            # If White is to move, we show "1."
+            # If Black is to move and it's the very first move of the list, we show "1..."
+            if is_white_turn:
+                num_text = f"{full_move_number}."
+                num_lbl = tk.Label(self.move_text_container, text=num_text,
+                                   font=("Consolas", 10), fg=num_fg, bg=bg_color)
+                self.move_text_container.window_create(tk.END, window=num_lbl)
+                self.move_text_container.insert(tk.END, " ")
+            elif i == 0:
+                # First move is black: show "1..."
+                num_text = f"{full_move_number}..."
+                num_lbl = tk.Label(self.move_text_container, text=num_text,
+                                   font=("Consolas", 10), fg=num_fg, bg=bg_color)
+                self.move_text_container.window_create(tk.END, window=num_lbl)
+                self.move_text_container.insert(tk.END, " ")
 
-            if token[0].isdigit():  # Move numbers (1., 2., etc)
-                fg = "gray"
-            elif token.startswith('(') or token.startswith('{'):  # Comments/Alts
-                fg = "green"
-                font = ("Consolas", 10, "italic")
-            else:  # Actual moves (e4, Nf3, etc)
-                is_move = True
-                move_counter += 1
+            # 2. Create the Move Label (using SAN from your list)
+            san_text = self.san_list[i]
+            lbl = tk.Label(self.move_text_container, text=san_text, font=("Consolas", 10),
+                           fg="black", bg=bg_color, cursor="hand2")
 
-            lbl = tk.Label(self.move_container, text=token, font=font,
-                           fg=fg, bg="#f0f0f0", cursor="hand2" if is_move else "")
-            lbl.pack(side=tk.LEFT)
+            if move_idx == self.current_step:
+                lbl.config(bg=active_bg, fg=active_fg, font=("Consolas", 10, "bold"))
 
-            # English: Highlight active move
-            if is_move and move_counter == self.current_step:
-                lbl.config(bg="#d1e3ff", fg="#1565c0", font=("Consolas", 10, "bold"))
+            lbl.bind("<Button-1>", lambda e, idx=move_idx: self._jump_to_move(idx))
 
-            # English: Bind click event only to moves
-            if is_move:
-                # We use a default argument in lambda to capture the current index
-                lbl.bind("<Button-1>", lambda e, idx=move_counter: self._jump_to_move(idx))
+            # 3. Add to flow and push the move to the temp_board for the next iteration
+            self.move_text_container.window_create(tk.END, window=lbl)
+            self.move_text_container.insert(tk.END, "  ")
 
-        # Add a spacer to prevent labels from stretching weirdly
-        tk.Label(self.move_container, bg="#f0f0f0").pack(side=tk.LEFT, expand=True)
+            temp_board.push(move)
+
+        self.move_text_container.config(state=tk.DISABLED)
 
     def _jump_to_move(self, index):
         """ Sets the puzzle state to a specific move index. """
@@ -1394,6 +1403,7 @@ class ChessPuzzleApp(tk.Toplevel):
             self.last_move_squares = []
 
         self.is_flipped = (self.board.turn == chess.BLACK)
+        puzzle['is_flipped'] = self.is_flipped
         self.lbl_turn.config(text=f"{self.t('white_turn') if self.board.turn else self.t('black_turn')}",
                              fg=self.themes[self.board_theme]["alert"])
         self.update_status_display()
