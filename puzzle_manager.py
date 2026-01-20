@@ -1359,6 +1359,12 @@ class ChessPuzzleApp(tk.Toplevel):
             #self.refresh_board()
 
     def _handle_move(self, move, from_sq, to_sq):
+        """ Called when the user makes a move in a puzzle.
+        Validates the move against the puzzle solution and triggers animation on error.
+        """
+        # Check if the engine is loaded and move is valid in the current context
+        if not self.engine or not self.board:
+            return
         p = self.engine.puzzles[self.engine.current_index]
         if self.solve_step >= len(p['solution']):
             puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
@@ -1372,11 +1378,13 @@ class ChessPuzzleApp(tk.Toplevel):
             self.last_move_squares = [move.from_square, move.to_square]
             self.solve_step += 1
             if self.solve_step >= len(p['solution']):
+                # no more moves; puzzle is solved
                 puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
                 self.engine.total_score += puzzle_result
                 #messagebox.showinfo(self.t("correct"), self.t("solved")+"!")
                 self._show_solution_and_continue(puzzle_result,self.t("solved"))
             else:
+                # puzzle continues; execute opponent move
                 self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
             self.refresh_board()
         else:
@@ -1388,23 +1396,25 @@ class ChessPuzzleApp(tk.Toplevel):
             else:
                 self._animate_wrong_move(from_sq, to_sq)
 
-                # English: Update attempts
+                # Update attempts
                 self.lbl_attempts.config(text=f"Tries: {self.attempts_left}", fg="red")
-                # English: Reset color after a short delay
+                # Reset color after a short delay
                 self.after(500, lambda: self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"]))
 
     def _animate_wrong_move(self, from_sq, to_sq):
-        # English: Get the canvas ID directly from our map
+        """ Animates the piece moving from the 'wrong' square back to the 'start'.
+        do not use _animate_piece because the piece is not moved to the end-position"""
+        # Get the canvas ID directly from our map
         piece_id = self.drawn_pieces.get(from_sq)
         if piece_id is None: return
 
-        # English: Calculate pixel distances
+        # Calculate pixel distances
         def get_pos(sq):
             f, r = chess.square_file(sq), chess.square_rank(sq)
             col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
             return col * self.field_size, row * self.field_size
 
-        # English: Where the piece should have stayed vs where it is now
+        # Where the piece should have stayed vs where it is now
         # Note: In _on_click, the board isn't updated yet for a wrong move,
         # but the user sees the piece at 'to_sq' because we handle the drag/click.
         # So we move it from 'to_sq' back to 'from_sq'.
@@ -1412,7 +1422,7 @@ class ChessPuzzleApp(tk.Toplevel):
         start_x, start_y = get_pos(from_sq)
         end_x, end_y = get_pos(to_sq)
 
-        # English: We first snap the piece to the 'wrong' square to ensure
+        # We first snap the piece to the 'wrong' square to ensure
         # the user sees it "land" before it flies back.
         self.canvas.coords(piece_id, end_x, end_y)
 
@@ -1429,11 +1439,51 @@ class ChessPuzzleApp(tk.Toplevel):
 
         step(0)
 
+    def _animate_piece(self, from_sq, to_sq, callback):
+        """
+        Universal animation handler that slides a piece between two squares.
+        Executes 'callback' function when the animation is finished.
+        """
+        piece_id = self.drawn_pieces.get(from_sq)
+        if not piece_id:
+            callback()
+            return
+
+        # Helper to get pixel coordinates
+        def get_pos(sq):
+            f, r = chess.square_file(sq), chess.square_rank(sq)
+            col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
+            return col * self.field_size, row * self.field_size
+
+        start_x, start_y = get_pos(from_sq)
+        target_x, target_y = get_pos(to_sq)
+
+        # Ensure the moving piece is on top of others
+        self.canvas.tag_raise(piece_id)
+
+        steps = 12
+        dx = (target_x - start_x) / steps
+        dy = (target_y - start_y) / steps
+
+        def step(count):
+            if count < steps:
+                self.canvas.move(piece_id, dx, dy)
+                self.after(12, lambda: step(count + 1))
+            else:
+                callback()
+
+        step(0)
+
     def _opp_move(self, move):
-        self.board.push(move)
-        self.last_move_squares = [move.from_square, move.to_square]
-        self.solve_step += 1
-        self.refresh_board()
+        """ Executes opponent move with animation. """
+
+        def finish_opp():
+            self.board.push(move)
+            self.last_move_squares = [move.from_square, move.to_square]
+            self.solve_step += 1
+            self.refresh_board()
+
+        self._animate_piece(move.from_square, move.to_square, finish_opp)
 
     def _show_hint(self):
         self.hint_square = self.engine.puzzles[self.engine.current_index]['solution'][self.solve_step].from_square
