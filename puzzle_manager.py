@@ -976,21 +976,87 @@ class AnalysisWindow(tk.Toplevel):
         tk.Label(self, text=self.t("top_themes"), font=("Segoe UI", 12, "bold"),
                  bg="#f8f9fa", fg="#2c3e50").pack(pady=(25, 10))
 
-        # Scrollable area for themes if the list is long
-        list_frame = tk.Frame(self, bg="white", padx=10, pady=10)
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=5)
+        # 1. Create a container frame for the Canvas and Scrollbar
+        container = tk.Frame(self, bg="white", relief=tk.SOLID, borderwidth=1)
+        container.pack(fill=tk.BOTH, expand=True, padx=30, pady=5)
 
+        # 2. Create the Canvas
+        canvas = tk.Canvas(container, bg="white", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+
+        # 3. This is the frame that will actually hold the themes
+        scrollable_frame = tk.Frame(canvas, bg="white")
+
+        # Configure the canvas to work with the scrollbar
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        # Place the frame inside the canvas
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw", width=370)  # Set width to match your UI
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack Canvas and Scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # 4. Fill the scrollable_frame with themes
+        # English: Loop through themes and make them interactive
         for theme, count in stats['themes'].items():
-            row = tk.Frame(list_frame, bg="white")
-            row.pack(fill=tk.X, pady=3)
-            # Use translation for theme if it exists in your dictionary
-            display_theme = self.t(theme.lower().replace(" ", "_")) or theme
-            tk.Label(row, text=display_theme, bg="white", fg="#7f8c8d").pack(side=tk.LEFT)
-            tk.Label(row, text=str(count), bg="white", font=("Segoe UI", 10, "bold"),
-                     fg="#2980b9").pack(side=tk.RIGHT)
+            # Create a frame that acts as a button
+            row = tk.Frame(scrollable_frame, bg="white", cursor="hand2")
+            row.pack(fill=tk.X, pady=3, padx=10)
 
+            trans_key = theme.lower().replace(" ", "_")
+            display_theme = self.t(trans_key) or theme
+
+            # Create the labels inside the frame
+            lbl_name = tk.Label(row, text=display_theme, bg="white", fg="#7f8c8d", cursor="hand2")
+            lbl_name.pack(side=tk.LEFT)
+
+            lbl_count = tk.Label(row, text=str(count), bg="white", font=("Segoe UI", 10, "bold"),
+                                 fg="#2980b9", cursor="hand2")
+            lbl_count.pack(side=tk.RIGHT)
+
+            # English: Bind the click event to the frame and its children
+            for widget in (row, lbl_name, lbl_count):
+                widget.bind("<Button-1>", lambda e, t=theme: self._on_theme_click(t))
+
+            # English: Optional hover effect
+            row.bind("<Enter>", lambda e, r=row: r.configure(bg="#f0f7ff"))
+            row.bind("<Leave>", lambda e, r=row: r.configure(bg="white"))
+
+        # 5. Enable mouse wheel scrolling for Chromebook touchpad
+        def _on_mousewheel(event):
+            # English: Standard Linux mouse wheel handling (Button 4/5 or delta)
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+            else:
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)  # Windows/MacOS
+        canvas.bind_all("<Button-4>", _on_mousewheel)  # Linux (Ubuntu)
+        canvas.bind_all("<Button-5>", _on_mousewheel)  # Linux (Ubuntu)
         # Close button at bottom
         ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=25)
+
+    def _on_theme_click(self, theme_name):
+        """
+        Handles the click event on a theme.
+        Filters the puzzle list and starts the first matching puzzle.
+        """
+        # English: Tell the engine to filter puzzles by this theme
+        # We assume your engine has a method for this, or we do it here:
+        filtered = [p for p in self.parent.engine.puzzles if theme_name in p.get('themes', '')]
+
+        if filtered:
+            # English: Logic to update the main app's current puzzle set
+            # For example, you could trigger a search in your main window:
+            self.parent.apply_filter(theme_name)  # You would need to create this method
+            self.destroy()  # Close the analysis window
 
     def _add_stat_row(self, parent, label, value):
         """ Internal helper to render a key-value pair in the UI. """
@@ -1544,6 +1610,19 @@ class ChessPuzzleApp(tk.Toplevel):
         stats = self.engine.analyze_database()
         # AnalysisWindow is the class we defined in the previous step
         AnalysisWindow(self, stats)
+
+    def apply_filter(self, theme_query):
+        """
+        Updates the active puzzle list based on a theme and resets the view.
+        """
+        # English: Filter the engine's list
+        new_selection = [p for p in self.engine.puzzles if theme_query.lower() in p.get('themes', '').lower()]
+
+        if new_selection:
+            # English: Update your app's current list and load the first one
+            self.engine.current_selection = new_selection
+            self.load_puzzle()
+            messagebox.showinfo(self.t("info"), f"{len(new_selection)} {self.t('puzzles_found')}")
 
     def _setup_lang_menu(self, parent_menu, translator):
         """ Dynamically builds the language selection menu. """
