@@ -718,63 +718,58 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def _jump_to_move(self, index):
         """
-        Jumps to a specific move index, animating the final move for visual clarity.
+        Jumps to a specific move index using push/pop for stability,
+        with an animation for the final move.
         """
+        # English: Prevent overlapping animations
         if getattr(self, "is_animating", False):
             return
-        # 1. Update the current step
-        #self.current_step = index
 
-        # 2. Rebuild the board to the state BEFORE the clicked move
-        # If index is 5, we want the board at step 4, then animate move 5.
-        # self.board = chess.Board(self.initial_fen)
-        # for i in range(index - 1):
-        #     self.board.push(self.solution_moves[i])
-
-        # 3. Get the move that needs to be animated
-        if index >= 0:
-            move_to_animate = self.solution_moves[index - 1]
-            from_sq = move_to_animate.from_square
-            to_sq = move_to_animate.to_square
-
-            # Draw the board at the 'n-1' state so the piece is at its starting position
-            min1 = self.current_step - index
-            plus = index - self.current_step
-            if plus > 0:
-
-              for i in range(plus):
-                  self.review_board.push(self.solution_moves[self.current_step+i])
-            else:
-              if min1 > 0:
-
-                for i in range(min1):
-                    self.review_board.pop()
-            self.current_step = index
+        # English: If jumping to the very start, just pop everything and refresh
+        if index <= 0:
+            while len(self.review_board.move_stack) > 0:
+                self.review_board.pop()
+            self.current_step = 0
+            self.last_move_squares = []
             self._update_display()
             return
 
-            # Define what happens when the animation finishes
-            def finalize_jump():
-                self.review_board.push(move_to_animate)
-                self.last_move_squares = [from_sq, to_sq]
-                self.current_step = index
-                self._update_display()  # This redraws everything and highlights the text
+        # 1. Navigate to the state exactly BEFORE the target move (index - 1)
+        target_step_pre = index - 1
+        diff = target_step_pre - self.current_step
 
-            # Start the universal animation
-            # Note: If from_sq to to_sq is the move, we animate it forward
-            self._animate_piece(from_sq, to_sq, finalize_jump)
-        else:
-            # If we jump to the very beginning (index 0), no animation is needed
-            self.last_move_squares = []
-            self._update_display()
+        if diff > 0:
+            # English: Move forward to n-1
+            for i in range(diff):
+                self.review_board.push(self.solution_moves[self.current_step + i])
+        elif diff < 0:
+            # English: Move backward to n-1
+            for _ in range(abs(diff)):
+                self.review_board.pop()
+
+        # 2. Update state to n-1 and draw the board
+        self.current_step = target_step_pre
+        self.refresh_board()
+
+        # 3. Prepare the final move for animation
+        move_to_animate = self.solution_moves[index - 1]
+        from_sq = move_to_animate.from_square
+        to_sq = move_to_animate.to_square
+
+        # English: Define the completion logic
+        def finalize_jump():
+            self.review_board.push(move_to_animate)
+            self.current_step = index
+            self.last_move_squares = [from_sq, to_sq]
+            self._update_display()  # English: Syncs the UI and highlighting
+            self.is_animating = False
+
+        # 4. Run the animation
+        self._animate_piece(from_sq, to_sq, finalize_jump)
 
     def _next_move(self):
         if self.current_step < len(self.solution_moves):
-            print("add step", self.current_step)
-            self.review_board.push(self.solution_moves[self.current_step])
-            self.current_step += 1
-            self._update_display()
-            #self._jump_to_move(self.current_step)
+            self._jump_to_move(self.current_step + 1)
 
     def _prev_move(self):
         if self.current_step > 0:
