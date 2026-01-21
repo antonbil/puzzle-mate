@@ -282,6 +282,66 @@ class Translator:
 t = Translator(TRANSLATIONS, default_lang="en")
 
 
+class MoveAnimator:
+    """
+    Handles chess piece animations on a Tkinter canvas.
+    Supports forward moves and 'return' animations for undos/mistakes.
+    """
+
+    def __init__(self, app):
+        self.app = app  # Reference to your Main Window/App
+        self.canvas = app.canvas
+        self.is_animating = False
+
+    def animate(self, from_sq, to_sq, callback=None, reverse=False, steps=10, delay=15):
+        """
+        Generic animation method.
+        If reverse is True, it simulates a piece flying back to its start.
+        """
+        self.is_animating = True
+        piece_id = self.app.drawn_pieces.get(from_sq if not reverse else to_sq)
+
+        if piece_id is None:
+            self._finish(callback)
+            return
+
+        def get_pos(sq):
+            f, r = chess.square_file(sq), chess.square_rank(sq)
+            col, row = (7 - f, r) if self.app.is_flipped else (f, 7 - r)
+            return col * self.app.field_size, row * self.app.field_size
+
+        start_x, start_y = get_pos(from_sq)
+        end_x, end_y = get_pos(to_sq)
+
+        # English: If reversing (undo), snap piece to the 'to_sq' first
+        if reverse:
+            self.canvas.coords(piece_id, end_x, end_y)
+            curr_x, curr_y = end_x, end_y
+            target_x, target_y = start_x, start_y
+        else:
+            curr_x, curr_y = start_x, start_y
+            target_x, target_y = end_x, end_y
+
+        self.canvas.tag_raise(piece_id)
+
+        dx = (target_x - curr_x) / steps
+        dy = (target_y - curr_y) / steps
+
+        def step(count):
+            if count < steps:
+                self.canvas.move(piece_id, dx, dy)
+                self.app.after(delay, lambda: step(count + 1))
+            else:
+                self._finish(callback)
+
+        step(0)
+
+    def _finish(self, callback):
+        """ Internal cleanup after animation. """
+        self.is_animating = False
+        if callback:
+            callback()
+
 class PuzzleValidator:
     """
     Utility class to verify the structural integrity of chess puzzles.
@@ -519,6 +579,7 @@ class HistoryDetailWindow(tk.Toplevel):
         self.board_theme = board_theme
         self.themes = themes
         self.t = t
+
         self.title(f"{self.t('review')} {puzzle['event']}")
 
         # Create a container frame to hold both labels side by side
@@ -559,6 +620,8 @@ class HistoryDetailWindow(tk.Toplevel):
         self.is_flipped = (self.review_board.turn == chess.BLACK)
 
         self._setup_ui()
+        # Initialize the animator and link it to this window
+        self.animator = MoveAnimator(self)
         self._update_display()
 
     def _generate_all_san(self):
@@ -718,14 +781,17 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def _jump_to_move(self, index):
         """
-        Jumps to a specific move index using push/pop for stability,
-        with an animation for the final move.
+        Jumps to a specific move index, intelligently choosing between
+        forward animation, backward animation, or a static jump.
         """
-        # English: Prevent overlapping animations
-        if getattr(self, "is_animating", False):
+        if self.animator.is_animating:
             return
 
-        # English: If jumping to the very start, just pop everything and refresh
+        # English: We want to animate the move that leads TO this index.
+        # If index is 5, we animate move 4 (0-indexed) from step 4 to 5.
+        target_step_pre = index - 1
+
+        # 1. Handle jump to the very beginning (no animation)
         if index <= 0:
             while len(self.review_board.move_stack) > 0:
                 self.review_board.pop()
@@ -734,46 +800,78 @@ class HistoryDetailWindow(tk.Toplevel):
             self._update_display()
             return
 
-        # 1. Navigate to the state exactly BEFORE the target move (index - 1)
-        target_step_pre = index - 1
+        # 2. Navigate the board to the 'pre-animation' state
+        # We use push/pop to get to the state exactly before the move we want to animate.
         diff = target_step_pre - self.current_step
-
         if diff > 0:
-            # English: Move forward to n-1
             for i in range(diff):
                 self.review_board.push(self.solution_moves[self.current_step + i])
         elif diff < 0:
-            # English: Move backward to n-1
             for _ in range(abs(diff)):
                 self.review_board.pop()
 
-        # 2. Update state to n-1 and draw the board
         self.current_step = target_step_pre
-        self.refresh_board()
+        self.refresh_board()  # English: Show the piece at its starting position
 
-        # 3. Prepare the final move for animation
-        move_to_animate = self.solution_moves[index - 1]
-        from_sq = move_to_animate.from_square
-        to_sq = move_to_animate.to_square
+        # 3. Determine animation direction
+        # If we are going to a higher index than where we were, it's a forward move.
+        # If we are 'jumping back' (e.g., from move 10 to move 5), we animate the move at index 5 returning.
+        move = self.solution_moves[index - 1]
 
-        # English: Define the completion logic
-        def finalize_jump():
-            self.review_board.push(move_to_animate)
-            self.current_step = index
-            self.last_move_squares = [from_sq, to_sq]
-            self._update_display()  # English: Syncs the UI and highlighting
-            self.is_animating = False
+        # English: Logic for forward vs backward animation
+        # Note: Usually, for a 'jump' back, users expect to see the move being undone.
+        is_reverse = (index <= self.current_step)
 
-        # 4. Run the animation
-        self._animate_piece(from_sq, to_sq, finalize_jump)
+        def finalize():
+            # English: Finalize board state after animation
+            if not is_reverse:
+                self.review_board.push(move)
+                self.current_step = index
+            else:
+                # If we were already past this move and jumped back,
+                # the piece has 'returned' to its start.
+                self.current_step = index
+                # The board is already at the correct state (target_step_pre)
+                # but we need to ensure the stack is correct if you'd push again.
+                pass
+
+            self.last_move_squares = [move.from_square, move.to_square]
+            self._update_display()
+
+        # 4. Execute animation
+        self.animator.animate(
+            move.from_square,
+            move.to_square,
+            callback=finalize,
+            reverse=is_reverse
+        )
 
     def _next_move(self):
         if self.current_step < len(self.solution_moves):
             self._jump_to_move(self.current_step + 1)
 
     def _prev_move(self):
-        if self.current_step > 0:
-            self._jump_to_move(self.current_step - 1)
+        """ Moves back one step with a visual 'return' animation. """
+        if self.animator.is_animating or self.current_step <= 0:
+            return
+
+        # English: The move we are undoing
+        move = self.solution_moves[self.current_step - 1]
+
+        def finalize_undo():
+            self.review_board.pop()
+            self.current_step -= 1
+            # Update highlights for the move now at the top of the stack
+            if self.current_step > 0:
+                m = self.solution_moves[self.current_step - 1]
+                self.last_move_squares = [m.from_square, m.to_square]
+            else:
+                self.last_move_squares = []
+            self._update_display()
+
+        # English: Animate from its CURRENT 'to_square' back to 'from_square'
+        self.animator.animate(move.from_square, move.to_square,
+                              callback=finalize_undo, reverse=True)
 
     def refresh_board(self):
         if self.is_animating:
