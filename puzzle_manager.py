@@ -40,6 +40,19 @@ TRANSLATIONS = {
         "all_puzzles_valid": "All puzzles are structurally sound!",
         "errors_found": "Invalid puzzles detected",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
+"menu_filter": "Filter Puzzles",
+    "filter_title": "Search Filter",
+    "filter_settings": "Filter Settings",
+    "filter_theme": "Theme (contains):",
+    "filter_rating_range": "Rating Range:",
+    "apply_filter": "Apply",
+    "puzzles_found": "puzzles found matching criteria.",
+    "no_puzzles_found": "No puzzles found for these filters.",
+    "min": "Min:",
+    "max": "Max:",
+    "clear": "Clear",
+"remove_filter": "Remove Filter",
+    "filter_removed_msg": "Filter removed. Showing all puzzles.",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
         "black_turn": "BLACK TO MOVE", "no_puzzles": "No puzzles active",
@@ -83,6 +96,19 @@ TRANSLATIONS = {
         "endgame": "Eindspel",
         "tactic": "Tactiek",
 "maintenance": "Onderhoud",
+"menu_filter": "Filter Puzzels",
+    "filter_title": "Zoekfilter",
+    "filter_settings": "Filter Instellingen",
+    "filter_theme": "Thema (bevat):",
+    "filter_rating_range": "Rating Bereik:",
+    "apply_filter": "Toepassen",
+    "puzzles_found": "puzzels gevonden die voldoen.",
+    "no_puzzles_found": "Geen puzzels gevonden met deze filters.",
+    "min": "Min:",
+    "max": "Max:",
+    "clear": "Wissen",
+"remove_filter": "Filter Verwijderen",
+    "filter_removed_msg": "Filter verwijderd. Alle puzzels worden getoond.",
         "run_validation": "Check op ongeldige puzzels",
         "validation_result": "Validatie Resultaat",
         "all_puzzles_valid": "Alle puzzels zijn technisch in orde!",
@@ -283,23 +309,17 @@ t = Translator(TRANSLATIONS, default_lang="en")
 
 
 class MoveAnimator:
-    """
-    Handles chess piece animations on a Tkinter canvas.
-    Supports forward moves and 'return' animations for undos/mistakes.
-    """
-
     def __init__(self, app):
-        self.app = app  # Reference to your Main Window/App
+        self.app = app
         self.canvas = app.canvas
         self.is_animating = False
 
     def animate(self, from_sq, to_sq, callback=None, reverse=False, steps=10, delay=15):
-        """
-        Generic animation method.
-        If reverse is True, it simulates a piece flying back to its start.
-        """
         self.is_animating = True
-        piece_id = self.app.drawn_pieces.get(from_sq if not reverse else to_sq)
+
+        # English: Find the piece. If reversing, it's currently at to_sq visually.
+        search_sq = to_sq if reverse else from_sq
+        piece_id = self.app.drawn_pieces.get(search_sq)
 
         if piece_id is None:
             self._finish(callback)
@@ -313,19 +333,22 @@ class MoveAnimator:
         start_x, start_y = get_pos(from_sq)
         end_x, end_y = get_pos(to_sq)
 
-        # English: If reversing (undo), snap piece to the 'to_sq' first
+        # --- CRUCIAL FIX ---
+        # English: Manually place the piece at the start position on the canvas
+        # BEFORE starting the animation loop, regardless of what the board state says.
         if reverse:
             self.canvas.coords(piece_id, end_x, end_y)
-            curr_x, curr_y = end_x, end_y
             target_x, target_y = start_x, start_y
         else:
-            curr_x, curr_y = start_x, start_y
+            self.canvas.coords(piece_id, start_x, start_y)
             target_x, target_y = end_x, end_y
 
         self.canvas.tag_raise(piece_id)
 
-        dx = (target_x - curr_x) / steps
-        dy = (target_y - curr_y) / steps
+        # Calculate movement per step
+        curr_coords = self.canvas.coords(piece_id)
+        dx = (target_x - curr_coords[0]) / steps
+        dy = (target_y - curr_coords[1]) / steps
 
         def step(count):
             if count < steps:
@@ -337,7 +360,6 @@ class MoveAnimator:
         step(0)
 
     def _finish(self, callback):
-        """ Internal cleanup after animation. """
         self.is_animating = False
         if callback:
             callback()
@@ -562,6 +584,93 @@ class PuzzleEngine:
 
 
 # --- CUSTOM WIDGETS ---
+class FilterWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.t = parent.t
+
+        self.title(self.t("filter_title"))
+        self.geometry("350x400")
+        self.configure(bg="#f8f9fa")
+        self.resizable(False, False)
+
+        # Main Title
+        tk.Label(self, text=self.t("filter_settings"), font=("Segoe UI", 14, "bold"),
+                 bg="#f8f9fa", fg="#2c3e50").pack(pady=15)
+
+        # --- Theme Filter Section ---
+        tk.Label(self, text=self.t("filter_theme"), bg="#f8f9fa").pack(anchor=tk.W, padx=30)
+        self.theme_entry = ttk.Entry(self)
+        self.theme_entry.pack(fill=tk.X, padx=30, pady=5)
+        self.theme_entry.insert(0, getattr(self.parent, 'last_theme_filter', ""))
+
+        # --- Rating Filter Section ---
+        tk.Label(self, text=self.t("filter_rating_range"), bg="#f8f9fa").pack(anchor=tk.W, padx=30, pady=(15, 0))
+
+        rating_frame = tk.Frame(self, bg="#f8f9fa")
+        rating_frame.pack(fill=tk.X, padx=30, pady=5)
+
+        tk.Label(rating_frame, text=self.t("min"), bg="#f8f9fa").pack(side=tk.LEFT)
+        self.min_rating = ttk.Entry(rating_frame, width=8)
+        self.min_rating.pack(side=tk.LEFT, padx=5)
+        self.min_rating.insert(0, getattr(self.parent, 'last_min_rating', "0"))
+
+        tk.Label(rating_frame, text=self.t("max"), bg="#f8f9fa").pack(side=tk.LEFT, padx=(10, 0))
+        self.max_rating = ttk.Entry(rating_frame, width=8)
+        self.max_rating.pack(side=tk.LEFT, padx=5)
+        self.max_rating.insert(0, getattr(self.parent, 'last_max_rating', "3000"))
+
+
+        # --- Buttons ---
+        btn_frame = tk.Frame(self, bg="#f8f9fa")
+        btn_frame.pack(fill=tk.X, padx=30, pady=30)
+
+        ttk.Button(btn_frame, text=self.t("apply_filter"), command=self._apply).pack(side=tk.LEFT, expand=True,
+                                                                                     fill=tk.X, padx=5)
+        ttk.Button(btn_frame, text=self.t("clear"), command=self._clear).pack(side=tk.LEFT, expand=True, fill=tk.X,
+                                                                              padx=5)
+        # In de __init__ voegen we de knop toe aan het btn_frame:
+        # (Plaats dit bij de andere knoppen)
+        ttk.Button(btn_frame, text=self.t("remove_filter"), command=self._reset_filter).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+
+    def _apply(self):
+        """ Collects values and sends them to the main app. """
+        filters = {
+            'theme': self.theme_entry.get().strip().lower(),
+            'min_rating': int(self.min_rating.get() or 0),
+            'max_rating': int(self.max_rating.get() or 9999)
+        }
+        # English: Store current settings for next time the window opens
+        self.parent.last_theme_filter = filters['theme']
+        self.parent.last_min_rating = str(filters['min_rating'])
+        self.parent.last_max_rating = str(filters['max_rating'])
+
+        self.parent.apply_advanced_filter(filters)
+        self.destroy()
+
+    def _clear(self):
+        """ Resets all filter fields. """
+        self.theme_entry.delete(0, tk.END)
+        self.min_rating.delete(0, tk.END)
+        self.min_rating.insert(0, "0")
+        self.max_rating.delete(0, tk.END)
+        self.max_rating.insert(0, "3000")
+
+    def _reset_filter(self):
+        """
+        Removes all filters and restores the full puzzle database.
+        """
+        # English: Clear the stored filter values in the parent app
+        self.parent.last_theme_filter = ""
+        self.parent.last_min_rating = "0"
+        self.parent.last_max_rating = "3000"
+
+        # English: Tell the app to restore the full list
+        self.parent.reset_database_filter()
+        self.destroy()
+
+
 
 # --- HISTORY DETAIL WINDOW ---
 
@@ -1384,6 +1493,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self._load_images(self.field_size)
         self._setup_menu()
         self._setup_ui()
+        self.animator = MoveAnimator(self)
 
         self.load_puzzle()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -1502,6 +1612,7 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, piece_set=self.piece_set))
         view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
         view_menu.add_command(label=self.t("analyze_db"), command=self._show_db_analysis)
+        view_menu.add_command(label=self.t("menu_filter"), command=lambda: FilterWindow(self))
 
         view_menu.add_separator()
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
@@ -1984,131 +2095,103 @@ class ChessPuzzleApp(tk.Toplevel):
             #self.refresh_board()
 
     def _handle_move(self, move, from_sq, to_sq):
-        """ Called when the user makes a move in a puzzle.
-        Validates the move against the puzzle solution and triggers animation on error.
         """
-        # Check if the engine is loaded and move is valid in the current context
-        if not self.engine or not self.board:
+        Called when the user makes a move.
+        Now animates correct moves before updating the board state.
+        """
+        if not self.engine or not self.board or self.animator.is_animating:
             return
+
         p = self.engine.puzzles[self.engine.current_index]
-        if self.solve_step >= len(p['solution']):
-            puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
-            self.engine.total_score += puzzle_result
-            self._show_solution_and_continue(puzzle_result, "Error in puzzle")
-            return
+
+        # 1. Check if move is correct
         if move == p['solution'][self.solve_step]:
-            self.btn_hint.pack_forget()
-            self.hint_square = None
-            self.board.push(move)
-            self.last_move_squares = [move.from_square, move.to_square]
-            self.solve_step += 1
-            if self.solve_step >= len(p['solution']):
-                # no more moves; puzzle is solved
-                puzzle_result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
-                self.engine.total_score += puzzle_result
-                #messagebox.showinfo(self.t("correct"), self.t("solved")+"!")
-                self._show_solution_and_continue(puzzle_result,self.t("solved"))
-            else:
-                # puzzle continues; execute opponent move
-                self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
-            self.refresh_board()
+
+            # English: Define what happens AFTER the user's piece has finished sliding
+            def finish_user_move():
+                self.btn_hint.pack_forget()
+                self.hint_square = None
+                self.board.push(move)
+                self.last_move_squares = [move.from_square, move.to_square]
+                self.solve_step += 1
+
+                if self.solve_step >= len(p['solution']):
+                    # Puzzle solved logic
+                    result = {3: 10, 2: 5, 1: 2}.get(self.attempts_left, 0)
+                    self.engine.total_score += result
+                    self._show_solution_and_continue(result, self.t("solved"))
+                else:
+                    # English: Wait a bit, then animate the opponent's reply
+                    self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
+
+                self.refresh_board()
+
+            # 2. English: Start the animation for the correct move
+            # We use a fast delay (15-20ms) so the game feels responsive
+            self.animator.animate(from_sq, to_sq, callback=finish_user_move)
+
         else:
+            # 3. Handle Wrong Move (remains mostly the same)
             self.attempts_left -= 1
             self.btn_hint.pack(side=tk.LEFT, padx=5)
+
             if self.attempts_left <= 0:
-                #messagebox.showerror(self.t("failed"), self.t("out_of_attempts"))
                 self._show_solution_and_continue(0, self.t("out_of_attempts"))
             else:
+                # English: Fly back animation
                 self._animate_wrong_move(from_sq, to_sq)
-
-                # Update attempts
                 self.lbl_attempts.config(text=f"Tries: {self.attempts_left}", fg="red")
-                # Reset color after a short delay
                 self.after(500, lambda: self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"]))
 
     def _animate_wrong_move(self, from_sq, to_sq):
-        """ Animates the piece moving from the 'wrong' square back to the 'start'.
-        do not use _animate_piece because the piece is not moved to the end-position"""
-        # Get the canvas ID directly from our map
-        piece_id = self.drawn_pieces.get(from_sq)
-        if piece_id is None: return
-
-        # Calculate pixel distances
-        def get_pos(sq):
-            f, r = chess.square_file(sq), chess.square_rank(sq)
-            col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
-            return col * self.field_size, row * self.field_size
-
-        # Where the piece should have stayed vs where it is now
-        # Note: In _on_click, the board isn't updated yet for a wrong move,
-        # but the user sees the piece at 'to_sq' because we handle the drag/click.
-        # So we move it from 'to_sq' back to 'from_sq'.
-
-        start_x, start_y = get_pos(from_sq)
-        end_x, end_y = get_pos(to_sq)
-
-        # We first snap the piece to the 'wrong' square to ensure
-        # the user sees it "land" before it flies back.
-        self.canvas.coords(piece_id, end_x, end_y)
-
-        steps = 10
-        dx = (start_x - end_x) / steps
-        dy = (start_y - end_y) / steps
-
-        def step(count):
-            if count < steps:
-                self.canvas.move(piece_id, dx, dy)
-                self.after(60, lambda: step(count + 1))
-            else:
-                self.refresh_board()  # English: Final clean redraw
-
-        step(0)
-
-    def _animate_piece(self, from_sq, to_sq, callback):
         """
-        Universal animation handler that slides a piece between two squares.
-        Executes 'callback' function when the animation is finished.
+        Animates the piece moving from the 'wrong' square back to the 'start'
+        using the MoveAnimator class.
         """
-        piece_id = self.drawn_pieces.get(from_sq)
-        if not piece_id:
-            callback()
+        # English: Prevent multiple simultaneous animations
+        if self.animator.is_animating:
             return
 
-        # Helper to get pixel coordinates
-        def get_pos(sq):
-            f, r = chess.square_file(sq), chess.square_rank(sq)
-            col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
-            return col * self.field_size, row * self.field_size
-
-        start_x, start_y = get_pos(from_sq)
-        target_x, target_y = get_pos(to_sq)
-
-        # Ensure the moving piece is on top of others
-        self.canvas.tag_raise(piece_id)
-
-        steps = 12
-        dx = (target_x - start_x) / steps
-        dy = (target_y - start_y) / steps
-
-        def step(count):
-            if count < steps:
-                self.canvas.move(piece_id, dx, dy)
-                self.after(12, lambda: step(count + 1))
-            else:
-                callback()
-
-        step(0)
+        # English: We use a slower delay (40-60ms) for mistakes to make it more visible,
+        # and a callback to refresh the board when finished.
+        self.animator.animate(
+            from_sq=to_sq,
+            to_sq=from_sq,
+            callback=self.refresh_board,
+            reverse=True,
+            steps=10,
+            delay=40
+        )
 
     def _opp_move(self, move):
-        """ Executes opponent move with animation. """
+        """
+        Executes the opponent's move with a smooth forward animation.
+        All comments are in English as requested.
+        """
+        # English: Guard against multiple animations
+        if self.animator.is_animating:
+            return
 
         def finish_opp():
+            # English: Update the logic board state
             self.board.push(move)
+            # English: Highlight the squares for the opponent's move
             self.last_move_squares = [move.from_square, move.to_square]
+            # English: Increment the internal step counter
             self.solve_step += 1
+            # English: Final UI sync
             self.refresh_board()
 
-        self._animate_piece(move.from_square, move.to_square, finish_opp)
+        # English: Use the MoveAnimator for a forward move (reverse=False)
+        # A delay of 20-30ms is usually perfect for opponent responses.
+        self.animator.animate(
+            from_sq=move.from_square,
+            to_sq=move.to_square,
+            callback=finish_opp,
+            reverse=False,
+            steps=10,
+            delay=25
+        )
 
     def _show_hint(self):
         self.hint_square = self.engine.puzzles[self.engine.current_index]['solution'][self.solve_step].from_square
@@ -2128,6 +2211,46 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def _load_images(self, size=60):
         self.piece_images = load_images(self.piece_set, size)
+
+    def apply_advanced_filter(self, criteria):
+        """
+        Filters the database based on theme and rating range.
+        """
+        filtered_list = []
+
+        for p in self.engine.puzzles:
+            # 1. Check Rating
+            try:
+                r = int(p.get('rating', 0))
+            except:
+                r = 0
+
+            rating_ok = criteria['min_rating'] <= r <= criteria['max_rating']
+
+            # 2. Check Theme
+            theme_ok = True
+            if criteria['theme']:
+                theme_ok = criteria['theme'] in p.get('themes', '').lower() or \
+                           criteria['theme'] in p.get('event', '').lower()
+
+            if rating_ok and theme_ok:
+                filtered_list.append(p)
+
+        if filtered_list:
+            self.engine.current_selection = filtered_list
+            self.load_puzzle(0)
+            messagebox.showinfo(self.t("info"), f"{len(filtered_list)} {self.t('puzzles_found')}")
+        else:
+            messagebox.showwarning(self.t("info"), self.t("no_puzzles_found"))
+
+        def reset_database_filter(self):
+            """
+            Restores the engine's current selection to the full puzzle list.
+            """
+            if hasattr(self.engine, 'puzzles'):
+                self.engine.current_selection = list(self.engine.puzzles)
+                self.load_puzzle(0)
+                messagebox.showinfo(self.t("info"), self.t("filter_removed_msg"))
 
 
 
