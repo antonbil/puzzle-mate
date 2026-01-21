@@ -51,7 +51,9 @@ TRANSLATIONS = {
     "min": "Min:",
     "max": "Max:",
     "clear": "Clear",
-"remove_filter": "Remove Filter",
+"enable_rating_filter": "Enable Rating Filter",
+        "enable_theme_filter": "Enable Theme Filter",
+
     "filter_removed_msg": "Filter removed. Showing all puzzles.",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -62,7 +64,7 @@ TRANSLATIONS = {
         "all_finished": "All puzzles finished!", "confirm_skip": "View solution? (-5 pts)",
         "reset_title": "Reset Progress", "reset_msg": "Are you sure you want to reset all progress for '{}'?",
         "perfect": "Perfect", "partial": "Solved", "failed_status": "Failed", "skipped": "Skipped",
-        "review": "Review", "performance": "Performance Analysis", "total_puzzles": "Total Puzzles:",
+        "review": "Review", "performance": "Performance Analysis",
         "avg_score": "Average Score:", "current_total": "Current Total:", "streak": "Longest Streak:",
         "exit": "Exit", "open_recent": "Open Recent", "load_pgn":"Load PGN...","progress_cleared":"Progress has been cleared.",
         "no_data_msg": "No data available yet.",
@@ -123,7 +125,7 @@ TRANSLATIONS = {
         "all_finished": "Alle puzzels voltooid!", "confirm_skip": "Oplossing bekijken? (-5 pnt)",
         "reset_title": "Voortgang Wissen", "reset_msg": "Weet u zeker dat u de voortgang voor '{}' wilt wissen?",
         "perfect": "Perfect", "partial": "Opgelost", "failed_status": "Gefaald", "skipped": "Overgeslagen",
-        "review": "Inspectie", "performance": "Prestatie Analyse", "total_puzzles": "Totaal Puzzels:",
+        "review": "Inspectie", "performance": "Prestatie Analyse",
         "avg_score": "Gem. Score:", "current_total": "Totaal Score:", "streak": "Langste Reeks:",
         "exit": "Afsluiten", "open_recent": "Recent geopend", "load_pgn":"Laad PGN...", "progress_cleared":"Voortgang verwijderd.",
         "no_data_msg": "Nog geen gegevens beschikbaar.",
@@ -131,6 +133,8 @@ TRANSLATIONS = {
         "themes":"thema's","puzzle_name":"Puzzel Naam","status":"Status","settings": "Instellingen",
         "board_color": "Bordkleur", "color_green": "Klassiek Groen", "color_blue": "Oceaan Blauw",
         "color_brown": "Hout Bruin", "color_gray": "Modern Grijs",
+"enable_rating_filter": "Rating-filter inschakelen",
+        "enable_theme_filter": "Thema-filter inschakelen",
 "back": "Terug", "forward": "Verder", "close": "Sluiten",
 "color_purple": "Koninklijk Paars",
 "color_night": "Middernacht Blauw",
@@ -251,10 +255,10 @@ def load_svg_piece(filename, size):
     """ Converts an SVG file to a Tkinter-compatible PhotoImage. """
     filepath = filename
 
-    # English: Convert SVG to PNG in memory using cairosvg
+    # Convert SVG to PNG in memory using cairosvg
     png_data = cairosvg.svg2png(url=filepath, output_width=size, output_height=size)
 
-    # English: Open the PNG data with PIL and convert to Tkinter PhotoImage
+    # Open the PNG data with PIL and convert to Tkinter PhotoImage
     image = Image.open(io.BytesIO(png_data))
     return ImageTk.PhotoImage(image)
 
@@ -277,7 +281,7 @@ class Translator:
     def __init__(self, translations, default_lang="en"):
         self.translations = translations
         self.current_lang = default_lang
-        # English: Use English as a fallback if a translation is missing
+        # Use English as a fallback if a translation is missing
         self.fallback_lang = "en"
 
     def set_language(self, lang_code):
@@ -287,7 +291,7 @@ class Translator:
 
     def get_available_languages(self):
         """ Returns a list of tuples: (iso_code, readable_name) """
-        # English: Extract the iso code (key) and the 'lang_name' value
+        # Extract the iso code (key) and the 'lang_name' value
         return [(code, lang_dict.get("lang_name", code))
                 for code, lang_dict in self.translations.items()]
 
@@ -295,14 +299,14 @@ class Translator:
         """
         The magic method that allows the object to be called like a function: t("key")
         """
-        # English: Try to get the translation in the current language
+        # Try to get the translation in the current language
         lang_dict = self.translations.get(self.current_lang, {})
         translation = lang_dict.get(key)
 
         if translation:
             return translation
 
-        # English: Fallback logic if the key is missing in the current language
+        # Fallback logic if the key is missing in the current language
         return self.translations.get(self.fallback_lang, {}).get(key, key)
 
 t = Translator(TRANSLATIONS, default_lang="en")
@@ -317,7 +321,7 @@ class MoveAnimator:
     def animate(self, from_sq, to_sq, callback=None, reverse=False, steps=10, delay=15):
         self.is_animating = True
 
-        # English: Find the piece. If reversing, it's currently at to_sq visually.
+        # Find the piece. If reversing, it's currently at to_sq visually.
         search_sq = to_sq if reverse else from_sq
         piece_id = self.app.drawn_pieces.get(search_sq)
 
@@ -334,7 +338,7 @@ class MoveAnimator:
         end_x, end_y = get_pos(to_sq)
 
         # --- CRUCIAL FIX ---
-        # English: Manually place the piece at the start position on the canvas
+        # Manually place the piece at the start position on the canvas
         # BEFORE starting the animation loop, regardless of what the board state says.
         if reverse:
             self.canvas.coords(piece_id, end_x, end_y)
@@ -575,7 +579,7 @@ class PuzzleEngine:
         # Build the final statistics dictionary
         stats = {
             "total": total,
-            "themes": dict(themes_count.most_common(12)),
+            "themes": dict(themes_count.most_common(30)),
             "min_rating": min(ratings) if ratings else "N/A",
             "max_rating": max(ratings) if ratings else "N/A",
             "avg_rating": sum(ratings) // len(ratings) if ratings else "N/A"
@@ -585,92 +589,178 @@ class PuzzleEngine:
 
 # --- CUSTOM WIDGETS ---
 class FilterWindow(tk.Toplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, stats):
         super().__init__(parent)
         self.parent = parent
         self.t = parent.t
+        self.stats = stats
 
         self.title(self.t("filter_title"))
-        self.geometry("350x400")
+        # English: Increased height to show more themes at once
+        self.geometry("480x800")
         self.configure(bg="#f8f9fa")
         self.resizable(False, False)
 
-        # Main Title
+        # English: State variables
+        self.use_theme = tk.BooleanVar(value=getattr(self.parent, 'last_use_theme', False))
+        self.use_rating = tk.BooleanVar(value=getattr(self.parent, 'last_use_rating', False))
+        self.selected_theme = tk.StringVar(value=getattr(self.parent, 'last_theme_filter', ""))
+
+        # English: UI Header
         tk.Label(self, text=self.t("filter_settings"), font=("Segoe UI", 14, "bold"),
-                 bg="#f8f9fa", fg="#2c3e50").pack(pady=15)
+                 bg="#f8f9fa", fg="#2c3e50").pack(pady=10)
 
-        # --- Theme Filter Section ---
-        tk.Label(self, text=self.t("filter_theme"), bg="#f8f9fa").pack(anchor=tk.W, padx=30)
-        self.theme_entry = ttk.Entry(self)
-        self.theme_entry.pack(fill=tk.X, padx=30, pady=5)
-        self.theme_entry.insert(0, getattr(self.parent, 'last_theme_filter', ""))
+        # --- Rating Section ---
+        rating_group = tk.LabelFrame(self, text=self.t("filter_rating_range"), bg="#f8f9fa", padx=10, pady=10)
+        rating_group.pack(fill=tk.X, padx=30, pady=5)
 
-        # --- Rating Filter Section ---
-        tk.Label(self, text=self.t("filter_rating_range"), bg="#f8f9fa").pack(anchor=tk.W, padx=30, pady=(15, 0))
+        tk.Checkbutton(rating_group, text=self.t("enable_rating_filter"), variable=self.use_rating,
+                       bg="#f8f9fa", command=self._toggle_entries).pack(anchor=tk.W)
 
-        rating_frame = tk.Frame(self, bg="#f8f9fa")
-        rating_frame.pack(fill=tk.X, padx=30, pady=5)
+        self.rating_frame = tk.Frame(rating_group, bg="#f8f9fa")
+        self.rating_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(rating_frame, text=self.t("min"), bg="#f8f9fa").pack(side=tk.LEFT)
-        self.min_rating = ttk.Entry(rating_frame, width=8)
+        tk.Label(self.rating_frame, text=self.t("min"), bg="#f8f9fa").pack(side=tk.LEFT)
+        self.min_rating = ttk.Entry(self.rating_frame, width=8)
         self.min_rating.pack(side=tk.LEFT, padx=5)
         self.min_rating.insert(0, getattr(self.parent, 'last_min_rating', "0"))
 
-        tk.Label(rating_frame, text=self.t("max"), bg="#f8f9fa").pack(side=tk.LEFT, padx=(10, 0))
-        self.max_rating = ttk.Entry(rating_frame, width=8)
+        tk.Label(self.rating_frame, text=self.t("max"), bg="#f8f9fa").pack(side=tk.LEFT, padx=(10, 0))
+        self.max_rating = ttk.Entry(self.rating_frame, width=8)
         self.max_rating.pack(side=tk.LEFT, padx=5)
         self.max_rating.insert(0, getattr(self.parent, 'last_max_rating', "3000"))
 
+        # --- Theme Section ---
+        theme_group = tk.LabelFrame(self, text=self.t("filter_theme"), bg="#f8f9fa", padx=10, pady=10)
+        theme_group.pack(fill=tk.BOTH, expand=True, padx=30, pady=5)
 
-        # --- Buttons ---
+        tk.Checkbutton(theme_group, text=self.t("enable_theme_filter"), variable=self.use_theme,
+                       bg="#f8f9fa", command=self._toggle_entries).pack(anchor=tk.W)
+
+        self.lbl_active_theme = tk.Label(theme_group, textvariable=self.selected_theme,
+                                         fg="#2980b9", font=("Segoe UI", 10, "bold"), bg="#f8f9fa")
+        self.lbl_active_theme.pack(pady=2)
+
+        # --- Theme List Container ---
+        self.theme_container = tk.Frame(theme_group, bg="white", relief=tk.SOLID, borderwidth=1)
+        self.theme_container.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # English: Create a dedicated style for the thick scrollbar
+        style = ttk.Style()
+        style.configure("Thick.Vertical.TScrollbar", width=25)  # English: Extra wide for Chromebook touch
+
+        # English: Canvas with scrollbar visibility fix
+        self.canvas = tk.Canvas(self.theme_container, bg="white", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.theme_container, orient="vertical",
+                                  command=self.canvas.yview, style="Thick.Vertical.TScrollbar")
+
+        self.scrollable_frame = tk.Frame(self.canvas, bg="white")
+
+        # English: Ensure the internal frame takes up the full width of the canvas
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        def _on_canvas_configure(event):
+            # English: Update the width of the inner frame to match the canvas
+            self.canvas.itemconfig(self.canvas_window, width=event.width)
+
+        self.canvas.bind("<Configure>", _on_canvas_configure)
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # English: Pack the scrollbar FIRST to ensure visibility
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # English: Populate themes
+        for theme, count in stats['themes'].items():
+            row = tk.Frame(self.scrollable_frame, bg="white", cursor="hand2")
+            row.pack(fill=tk.X, pady=1, padx=2)  # English: Reduced pady to show more items
+
+            display_name = self.t(theme.lower().replace(" ", "_")) or theme
+            tk.Label(row, text=display_name, bg="white", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=10)
+
+            # English: Pushed count label to the far right with anchor and padx
+            tk.Label(row, text=str(count), bg="white", fg="#95a5a6",
+                     font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT, padx=15)
+
+            for w in (row, row.winfo_children()[0], row.winfo_children()[1]):
+                w.bind("<Button-1>", lambda e, t=theme: self._select_theme(t))
+                # English: Hover effect
+                w.bind("<Enter>", lambda e, r=row: r.configure(bg="#f0f7ff"))
+                w.bind("<Leave>", lambda e, r=row: r.configure(bg="white"))
+
+        # English: Mousewheel support for scrolling
+        def _on_mousewheel(event):
+            if event.num == 4:
+                self.canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                self.canvas.yview_scroll(1, "units")
+            else:
+                self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        self.canvas.bind_all("<Button-4>", _on_mousewheel)
+        self.canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        self._toggle_entries()
+
+        # --- Action Buttons ---
         btn_frame = tk.Frame(self, bg="#f8f9fa")
-        btn_frame.pack(fill=tk.X, padx=30, pady=30)
+        btn_frame.pack(fill=tk.X, padx=30, pady=15)
 
         ttk.Button(btn_frame, text=self.t("apply_filter"), command=self._apply).pack(side=tk.LEFT, expand=True,
-                                                                                     fill=tk.X, padx=5)
-        ttk.Button(btn_frame, text=self.t("clear"), command=self._clear).pack(side=tk.LEFT, expand=True, fill=tk.X,
-                                                                              padx=5)
-        # In de __init__ voegen we de knop toe aan het btn_frame:
-        # (Plaats dit bij de andere knoppen)
-        ttk.Button(btn_frame, text=self.t("remove_filter"), command=self._reset_filter).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+                                                                                     fill=tk.X, padx=2)
+        ttk.Button(btn_frame, text=self.t("remove_filter"), command=self._reset_filter).pack(side=tk.LEFT, expand=True,
+                                                                                             fill=tk.X, padx=2)
+        ttk.Button(btn_frame, text=self.t("cancel"), command=self.destroy).pack(side=tk.LEFT, expand=True, fill=tk.X,
+                                                                                padx=2)
+
+    def _select_theme(self, theme):
+        """ English: Sets active theme and auto-enables the checkbox. """
+        self.selected_theme.set(theme)
+        self.use_theme.set(True)
+        self._toggle_entries()
+
+    def _toggle_entries(self):
+        """ English: Enables/disables widgets based on checkboxes. """
+        r_state = "normal" if self.use_rating.get() else "disabled"
+        self.min_rating.config(state=r_state)
+        self.max_rating.config(state=r_state)
+
+        # English: Visual fade effect for the theme list
+        alpha_bg = "white" if self.use_theme.get() else "#f0f0f0"
+        self.scrollable_frame.config(bg=alpha_bg)
+        self.canvas.config(bg=alpha_bg)
 
     def _apply(self):
-        """ Collects values and sends them to the main app. """
-        filters = {
-            'theme': self.theme_entry.get().strip().lower(),
-            'min_rating': int(self.min_rating.get() or 0),
-            'max_rating': int(self.max_rating.get() or 9999)
-        }
-        # English: Store current settings for next time the window opens
-        self.parent.last_theme_filter = filters['theme']
-        self.parent.last_min_rating = str(filters['min_rating'])
-        self.parent.last_max_rating = str(filters['max_rating'])
+        """ English: Applies logic and saves state to parent. """
+        try:
+            filters = {
+                'use_theme': self.use_theme.get(),
+                'use_rating': self.use_rating.get(),
+                'theme': self.selected_theme.get(),
+                'min_rating': int(self.min_rating.get() or 0),
+                'max_rating': int(self.max_rating.get() or 9999)
+            }
+            # English: Persistence
+            self.parent.last_use_theme = filters['use_theme']
+            self.parent.last_use_rating = filters['use_rating']
+            self.parent.last_theme_filter = filters['theme']
+            self.parent.last_min_rating = str(filters['min_rating'])
+            self.parent.last_max_rating = str(filters['max_rating'])
 
-        self.parent.apply_advanced_filter(filters)
-        self.destroy()
-
-    def _clear(self):
-        """ Resets all filter fields. """
-        self.theme_entry.delete(0, tk.END)
-        self.min_rating.delete(0, tk.END)
-        self.min_rating.insert(0, "0")
-        self.max_rating.delete(0, tk.END)
-        self.max_rating.insert(0, "3000")
+            self.parent.apply_advanced_filter(filters)
+            self.destroy()
+        except ValueError:
+            messagebox.showerror("Error", "Please enter valid numbers for rating.")
 
     def _reset_filter(self):
-        """
-        Removes all filters and restores the full puzzle database.
-        """
-        # English: Clear the stored filter values in the parent app
-        self.parent.last_theme_filter = ""
-        self.parent.last_min_rating = "0"
-        self.parent.last_max_rating = "3000"
-
-        # English: Tell the app to restore the full list
+        """ English: Removes all filters. """
+        self.parent.last_use_theme = False
+        self.parent.last_use_rating = False
         self.parent.reset_database_filter()
         self.destroy()
-
-
 
 # --- HISTORY DETAIL WINDOW ---
 
@@ -896,7 +986,7 @@ class HistoryDetailWindow(tk.Toplevel):
         if self.animator.is_animating:
             return
 
-        # English: We want to animate the move that leads TO this index.
+        # We want to animate the move that leads TO this index.
         # If index is 5, we animate move 4 (0-indexed) from step 4 to 5.
         target_step_pre = index - 1
 
@@ -920,19 +1010,19 @@ class HistoryDetailWindow(tk.Toplevel):
                 self.review_board.pop()
 
         self.current_step = target_step_pre
-        self.refresh_board()  # English: Show the piece at its starting position
+        self.refresh_board()  # Show the piece at its starting position
 
         # 3. Determine animation direction
         # If we are going to a higher index than where we were, it's a forward move.
         # If we are 'jumping back' (e.g., from move 10 to move 5), we animate the move at index 5 returning.
         move = self.solution_moves[index - 1]
 
-        # English: Logic for forward vs backward animation
+        # Logic for forward vs backward animation
         # Note: Usually, for a 'jump' back, users expect to see the move being undone.
         is_reverse = (index <= self.current_step)
 
         def finalize():
-            # English: Finalize board state after animation
+            # Finalize board state after animation
             if not is_reverse:
                 self.review_board.push(move)
                 self.current_step = index
@@ -964,7 +1054,7 @@ class HistoryDetailWindow(tk.Toplevel):
         if self.animator.is_animating or self.current_step <= 0:
             return
 
-        # English: The move we are undoing
+        # The move we are undoing
         move = self.solution_moves[self.current_step - 1]
 
         def finalize_undo():
@@ -978,7 +1068,7 @@ class HistoryDetailWindow(tk.Toplevel):
                 self.last_move_squares = []
             self._update_display()
 
-        # English: Animate from its CURRENT 'to_square' back to 'from_square'
+        # Animate from its CURRENT 'to_square' back to 'from_square'
         self.animator.animate(move.from_square, move.to_square,
                               callback=finalize_undo, reverse=True)
 
@@ -1209,7 +1299,7 @@ class AnalysisWindow(tk.Toplevel):
         scrollbar.pack(side="right", fill="y")
 
         # 4. Fill the scrollable_frame with themes
-        # English: Loop through themes and make them interactive
+        # Loop through themes and make them interactive
         for theme, count in stats['themes'].items():
             # Create a frame that acts as a button
             row = tk.Frame(scrollable_frame, bg="white", cursor="hand2")
@@ -1226,17 +1316,17 @@ class AnalysisWindow(tk.Toplevel):
                                  fg="#2980b9", cursor="hand2")
             lbl_count.pack(side=tk.RIGHT)
 
-            # English: Bind the click event to the frame and its children
+            # Bind the click event to the frame and its children
             for widget in (row, lbl_name, lbl_count):
                 widget.bind("<Button-1>", lambda e, t=theme: self._on_theme_click(t))
 
-            # English: Optional hover effect
+            # Optional hover effect
             row.bind("<Enter>", lambda e, r=row: r.configure(bg="#f0f7ff"))
             row.bind("<Leave>", lambda e, r=row: r.configure(bg="white"))
 
         # 5. Enable mouse wheel scrolling for Chromebook touchpad
         def _on_mousewheel(event):
-            # English: Standard Linux mouse wheel handling (Button 4/5 or delta)
+            # Standard Linux mouse wheel handling (Button 4/5 or delta)
             if event.num == 4:
                 canvas.yview_scroll(-1, "units")
             elif event.num == 5:
@@ -1255,12 +1345,12 @@ class AnalysisWindow(tk.Toplevel):
         Handles the click event on a theme.
         Filters the puzzle list and starts the first matching puzzle.
         """
-        # English: Tell the engine to filter puzzles by this theme
+        # Tell the engine to filter puzzles by this theme
         # We assume your engine has a method for this, or we do it here:
         filtered = [p for p in self.parent.engine.puzzles if theme_name in p.get('themes', '')]
 
         if filtered:
-            # English: Logic to update the main app's current puzzle set
+            # Logic to update the main app's current puzzle set
             # For example, you could trigger a search in your main window:
             self.parent.apply_filter(theme_name)  # You would need to create this method
             self.destroy()  # Close the analysis window
@@ -1568,25 +1658,25 @@ class ChessPuzzleApp(tk.Toplevel):
         color_m.add_command(label=self.t("color_sand"), command=lambda: self._set_theme("sand"))
         color_m.add_command(label=self.t("color_emerald"), command=lambda: self._set_theme("emerald"))
 
-        # English: Submenu for Piece Sets
+        # Submenu for Piece Sets
         pieces_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=t("piece_set"), menu=pieces_m)
 
-        # English: List available sets manually (or scan the Images folder)
+        # List available sets manually (or scan the Images folder)
         available_sets = ["tatiana", "staunty"]
 
         for p_set in available_sets:
-            # English: capitalize() makes the menu look cleaner (e.g., 'Staunty')
+            # capitalize() makes the menu look cleaner (e.g., 'Staunty')
             pieces_m.add_command(
                 label=p_set.capitalize(),
                 command=lambda s=p_set: self._set_piece_set(s)
             )
 
-        # English: Submenu for Board Size
+        # Submenu for Board Size
         size_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=t("board_size"), menu=size_m)
 
-        # English: Mapping display keys to pixel values
+        # Mapping display keys to pixel values
         sizes = [
             ("small", 60),
             ("medium", 70),
@@ -1596,12 +1686,12 @@ class ChessPuzzleApp(tk.Toplevel):
         ]
 
         for key, val in sizes:
-            # English: We use l=val to capture the current size in the loop
+            # We use l=val to capture the current size in the loop
             size_m.add_command(
                 label=t(key),
                 command=lambda v=val: self._set_field_size(v)
             )
-        # English: Orientation Submenu
+        # Orientation Submenu
         orient_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=t("orientation"), menu=orient_m)
         orient_m.add_command(label=t("portrait"), command=lambda: self._set_orientation("portrait"))
@@ -1612,19 +1702,19 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, piece_set=self.piece_set))
         view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
         view_menu.add_command(label=self.t("analyze_db"), command=self._show_db_analysis)
-        view_menu.add_command(label=self.t("menu_filter"), command=lambda: FilterWindow(self))
+        view_menu.add_command(label=self.t("menu_filter"), command=self._open_filter_window)
 
         view_menu.add_separator()
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
 
     def _setup_ui(self):
-        # English: The very outer background (visible during transitions)
+        # The very outer background (visible during transitions)
         self.config(bg="#dcdcdc")
 
-        # English: The light border frame around the entire app
+        # The light border frame around the entire app
         self.master_container = tk.Frame(self, bg="#f0f0f0", bd=2, relief=tk.FLAT)
 
-        # English: Sidebar/Header (we will style this in _arrange_layout)
+        # Sidebar/Header (we will style this in _arrange_layout)
         self.header = tk.Frame(self.master_container, pady=20, padx=20)
 
         # Labels inside the header
@@ -1636,12 +1726,12 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_sub = tk.Label(self.header, text="", font=("Segoe UI", 9, "italic"))
         self.lbl_sub.pack()
 
-        # English: The "Black Badge" Turn Indicator
+        # The "Black Badge" Turn Indicator
         self.turn_badge = tk.Frame(self.header, padx=15, pady=8, relief=tk.RAISED, bd=2)
         self.lbl_turn = tk.Label(self.turn_badge, text="", font=("Segoe UI", 11, "bold"))
         self.lbl_turn.pack()
 
-        # English: Styled Turn Indicator (The "Badge")
+        # Styled Turn Indicator (The "Badge")
         # We put it in a frame to give it a nice border/background
         self.turn_badge = tk.Frame(self.header, padx=10, pady=5, relief=tk.RAISED, bd=1)
         self.turn_badge.pack(pady=20)
@@ -1649,7 +1739,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.lbl_turn = tk.Label(self.turn_badge, text="", font=("Segoe UI", 11, "bold"))
         self.lbl_turn.pack()
 
-        # English: 2. Board Container (The frame that holds both the board and the buttons)
+        # 2. Board Container (The frame that holds both the board and the buttons)
         # Important: We don't pack it here, _arrange_layout will do that.
         self.board_container = tk.Frame(self.master_container, bg="#f0f0f0")
 
@@ -1700,51 +1790,51 @@ class ChessPuzzleApp(tk.Toplevel):
         board_px = (self.field_size * 8) + 50
 
         if orientation == "portrait":
-            # English: Use very small paddings (pady) to save vertical space
+            # Use very small paddings (pady) to save vertical space
             content_w = board_px + 40
-            content_h = board_px + 180  # English: Reduced height estimate
+            content_h = board_px + 180  # Reduced height estimate
 
             self.header.config(bg="#f0f0f0", pady=2)  # Minimal padding for the header frame
 
-            # English: Stack labels with 0 or 1 pixel padding
+            # Stack labels with 0 or 1 pixel padding
             self.lbl_rating.config(bg="#f0f0f0", fg="#555555")
             self.lbl_rating.pack(side=tk.TOP, pady=0)
             self.lbl_overall.pack(side=tk.TOP, pady=0)
             self.lbl_event.pack(side=tk.TOP, pady=0)
             self.lbl_sub.pack(side=tk.TOP, pady=0)
 
-            # English: The badge gets just enough space to not touch the text
+            # The badge gets just enough space to not touch the text
             self.turn_badge.config(bg="#333333", bd=1, relief=tk.SOLID)
             self.turn_badge.pack(side=tk.TOP, pady=4)
             self.lbl_turn.config(bg="#333333", fg="white", font=("Segoe UI", 9, "bold"))
 
-            # English: Colors for portrait
+            # Colors for portrait
             for lbl in [self.lbl_overall, self.lbl_event, self.lbl_sub]:
                 lbl.config(bg="#f0f0f0", fg="black")
 
             self.header.pack(side=tk.TOP, fill=tk.X)
             self.board_container.pack(side=tk.TOP, pady=2)
         else:
-            # English: 2. LANDSCAPE (Grey Board Area vs Dark Sidebar)
+            # 2. LANDSCAPE (Grey Board Area vs Dark Sidebar)
             sidebar_w = 350
             content_w = board_px + sidebar_w + 20
             content_h = board_px + 80
 
-            # English: Sidebar stays dark/wood-toned
+            # Sidebar stays dark/wood-toned
             self.header.config(bg=bg_frame, pady=30)
 
-            # English: Board container becomes grey to create a visual break
-            bg_grey = "#e0e0e0"  # English: A clean, neutral grey
+            # Board container becomes grey to create a visual break
+            bg_grey = "#e0e0e0"  # A clean, neutral grey
             self.board_container.config(bg=bg_grey)
             self.controls_under_board.config(bg=bg_grey)
 
-            # English: Styles for labels in their respective areas
+            # Styles for labels in their respective areas
             for lbl in [self.lbl_overall, self.lbl_event, self.lbl_sub]:
                 lbl.config(bg=bg_frame, fg="white")
 
             self.lbl_attempts.config(bg=bg_grey, fg="black")  # Counter on grey needs dark text
 
-            # English: Dashboard spacing
+            # Dashboard spacing
             self.lbl_rating.config(bg=bg_frame, fg="#ffcc00")  # Gold color for rating looks great on dark
             self.lbl_rating.pack(side=tk.TOP, pady=5)
             self.lbl_overall.pack(side=tk.TOP, pady=(20, 10))
@@ -1752,11 +1842,11 @@ class ChessPuzzleApp(tk.Toplevel):
             self.lbl_sub.pack(side=tk.TOP, pady=10)
             self.turn_badge.pack(side=tk.TOP, pady=30)
 
-            # English: Pack with distinct zones
+            # Pack with distinct zones
             self.board_container.pack(side=tk.LEFT, fill=tk.Y, padx=(1, 0))
             self.header.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # English: Final assembly with a very thin white margin
+        # Final assembly with a very thin white margin
         self.master_container.config(width=content_w, height=content_h)
         self.master_container.pack(expand=True, padx=5, pady=5)
 
@@ -1768,31 +1858,31 @@ class ChessPuzzleApp(tk.Toplevel):
         Adjusts the physical window geometry based on the calculated content size.
         Includes extra padding for the 'border frame' effect.
         """
-        # English: Add extra padding for the master_container margins (e.g., 40px total)
+        # Add extra padding for the master_container margins (e.g., 40px total)
         total_w = content_w + 40
         total_h = content_h + 40
 
-        # English: Get screen dimensions to prevent the window from being larger than the display
+        # Get screen dimensions to prevent the window from being larger than the display
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
 
-        # English: Ensure we don't exceed screen limits (important for Chromebooks)
+        # Ensure we don't exceed screen limits (important for Chromebooks)
         final_w = min(total_w, screen_w - 50)
         final_h = min(total_h, screen_h - 100)
 
-        # English: Update geometry only if not in a 'zoomed' or 'fullscreen' state
+        # Update geometry only if not in a 'zoomed' or 'fullscreen' state
         # to avoid the "double title bar" glitch on ChromeOS.
         state = self.wm_state()
         if state != "zoomed" and not self.attributes("-fullscreen"):
             self.geometry(f"{int(final_w)}x{int(final_h)}")
 
-        # English: Center the window on the screen for a professional look
+        # Center the window on the screen for a professional look
         # (Optional: only if you want the window to jump to the middle)
         # x = (screen_w // 2) - (final_w // 2)
         # y = (screen_h // 2) - (final_h // 2)
         # self.geometry(f"+{int(x)}+{int(y)}")
 
-        self.update()  # English: Force the window manager to apply changes immediately
+        self.update()  # Force the window manager to apply changes immediately
 
     def _set_field_size(self, size):
         """ Updates the field size, reloads images at the new scale, and resizes the board. """
@@ -1800,13 +1890,23 @@ class ChessPuzzleApp(tk.Toplevel):
         self.config_data["field_size"] = size
         self._save_config()
 
-        # English: We must reload images because they need to be re-scaled to the new size
+        # We must reload images because they need to be re-scaled to the new size
         self._load_images(size)
 
-        # English: Update the canvas size and refresh everything
+        # Update the canvas size and refresh everything
         canvas_width = size * 8
         self.canvas.config(width=canvas_width, height=canvas_width)
         self.refresh_board()
+
+    def _open_filter_window(self):
+        """
+        Calculates current database statistics and opens the filter window.
+        """
+        # English: Generate stats to get the list of available themes and rating ranges
+        stats = self.engine.analyze_database()
+
+        # English: Open the window and pass the stats object
+        FilterWindow(self, stats)
 
     def _show_db_analysis(self):
         """
@@ -1824,11 +1924,11 @@ class ChessPuzzleApp(tk.Toplevel):
         """
         Updates the active puzzle list based on a theme and resets the view.
         """
-        # English: Filter the engine's list
+        # Filter the engine's list
         new_selection = [p for p in self.engine.puzzles if theme_query.lower() in p.get('themes', '').lower()]
 
         if new_selection:
-            # English: Update your app's current list and load the first one
+            # Update your app's current list and load the first one
             self.engine.current_selection = new_selection
             self.load_puzzle()
             messagebox.showinfo(self.t("info"), f"{len(new_selection)} {self.t('puzzles_found')}")
@@ -1838,9 +1938,9 @@ class ChessPuzzleApp(tk.Toplevel):
         lang_menu = tk.Menu(parent_menu, tearoff=0)
         parent_menu.add_cascade(label=translator("language"), menu=lang_menu)
 
-        # English: Loop through available languages from the translator object
+        # Loop through available languages from the translator object
         # for code, name in translator.get_available_languages():
-        #     # English: We use 'l=code' in the lambda to capture the current value of code
+        #     # We use 'l=code' in the lambda to capture the current value of code
         #     lang_menu.add_command(
         #         label=name,
         #         command=lambda l=code: self._set_lang(l)
@@ -1859,10 +1959,10 @@ class ChessPuzzleApp(tk.Toplevel):
         self.config_data["piece_set"] = set_name
         self._save_config()
 
-        # English: Reload the images with the new set
+        # Reload the images with the new set
         self._load_images(self.field_size)
 
-        # English: Refresh the board to show new pieces
+        # Refresh the board to show new pieces
         self.refresh_board()
 
     def _set_theme(self, theme_key):
@@ -2107,7 +2207,7 @@ class ChessPuzzleApp(tk.Toplevel):
         # 1. Check if move is correct
         if move == p['solution'][self.solve_step]:
 
-            # English: Define what happens AFTER the user's piece has finished sliding
+            # Define what happens AFTER the user's piece has finished sliding
             def finish_user_move():
                 self.btn_hint.pack_forget()
                 self.hint_square = None
@@ -2121,12 +2221,12 @@ class ChessPuzzleApp(tk.Toplevel):
                     self.engine.total_score += result
                     self._show_solution_and_continue(result, self.t("solved"))
                 else:
-                    # English: Wait a bit, then animate the opponent's reply
+                    # Wait a bit, then animate the opponent's reply
                     self.after(500, lambda: self._opp_move(p['solution'][self.solve_step]))
 
                 self.refresh_board()
 
-            # 2. English: Start the animation for the correct move
+            # 2. Start the animation for the correct move
             # We use a fast delay (15-20ms) so the game feels responsive
             self.animator.animate(from_sq, to_sq, callback=finish_user_move)
 
@@ -2138,7 +2238,7 @@ class ChessPuzzleApp(tk.Toplevel):
             if self.attempts_left <= 0:
                 self._show_solution_and_continue(0, self.t("out_of_attempts"))
             else:
-                # English: Fly back animation
+                # Fly back animation
                 self._animate_wrong_move(from_sq, to_sq)
                 self.lbl_attempts.config(text=f"Tries: {self.attempts_left}", fg="red")
                 self.after(500, lambda: self.lbl_attempts.config(fg=self.themes[self.board_theme]["alert"]))
@@ -2148,11 +2248,11 @@ class ChessPuzzleApp(tk.Toplevel):
         Animates the piece moving from the 'wrong' square back to the 'start'
         using the MoveAnimator class.
         """
-        # English: Prevent multiple simultaneous animations
+        # Prevent multiple simultaneous animations
         if self.animator.is_animating:
             return
 
-        # English: We use a slower delay (40-60ms) for mistakes to make it more visible,
+        # We use a slower delay (40-60ms) for mistakes to make it more visible,
         # and a callback to refresh the board when finished.
         self.animator.animate(
             from_sq=to_sq,
@@ -2168,21 +2268,21 @@ class ChessPuzzleApp(tk.Toplevel):
         Executes the opponent's move with a smooth forward animation.
         All comments are in English as requested.
         """
-        # English: Guard against multiple animations
+        # Guard against multiple animations
         if self.animator.is_animating:
             return
 
         def finish_opp():
-            # English: Update the logic board state
+            # Update the logic board state
             self.board.push(move)
-            # English: Highlight the squares for the opponent's move
+            # Highlight the squares for the opponent's move
             self.last_move_squares = [move.from_square, move.to_square]
-            # English: Increment the internal step counter
+            # Increment the internal step counter
             self.solve_step += 1
-            # English: Final UI sync
+            # Final UI sync
             self.refresh_board()
 
-        # English: Use the MoveAnimator for a forward move (reverse=False)
+        # Use the MoveAnimator for a forward move (reverse=False)
         # A delay of 20-30ms is usually perfect for opponent responses.
         self.animator.animate(
             from_sq=move.from_square,
@@ -2214,42 +2314,51 @@ class ChessPuzzleApp(tk.Toplevel):
 
     def apply_advanced_filter(self, criteria):
         """
-        Filters the database based on theme and rating range.
+        Filters the puzzle database based on theme and rating checkboxes.
         """
         filtered_list = []
 
         for p in self.engine.puzzles:
-            # 1. Check Rating
-            try:
-                r = int(p.get('rating', 0))
-            except:
-                r = 0
-
-            rating_ok = criteria['min_rating'] <= r <= criteria['max_rating']
-
-            # 2. Check Theme
+            # English: Initial assumption is that the puzzle matches
+            rating_ok = True
             theme_ok = True
-            if criteria['theme']:
-                theme_ok = criteria['theme'] in p.get('themes', '').lower() or \
-                           criteria['theme'] in p.get('event', '').lower()
 
+            # 1. English: Handle Rating Filter if checkbox is active
+            if criteria.get('use_rating'):
+                try:
+                    # English: Ensure we compare integers
+                    puzzle_rating = int(p.get('rating', 0))
+                    rating_ok = criteria['min_rating'] <= puzzle_rating <= criteria['max_rating']
+                except (ValueError, TypeError):
+                    rating_ok = False
+
+            # 2. English: Handle Theme Filter if checkbox is active
+            if criteria.get('use_theme'):
+                selected_theme = criteria.get('theme', '').lower()
+                puzzle_themes = p.get('themes', '').lower()
+                theme_ok = selected_theme in puzzle_themes
+
+            # English: Only add to selection if both conditions are met
             if rating_ok and theme_ok:
                 filtered_list.append(p)
 
+        # 3. English: Update the UI and selection
         if filtered_list:
             self.engine.current_selection = filtered_list
-            self.load_puzzle(0)
-            messagebox.showinfo(self.t("info"), f"{len(filtered_list)} {self.t('puzzles_found')}")
+            self.load_puzzle()
+            # English: Inform user about the results
+            msg = f"{len(filtered_list)} {self.t('puzzles_found')}"
+            messagebox.showinfo(self.t("info"), msg)
         else:
             messagebox.showwarning(self.t("info"), self.t("no_puzzles_found"))
 
-        def reset_database_filter(self):
+    def reset_database_filter(self):
             """
             Restores the engine's current selection to the full puzzle list.
             """
             if hasattr(self.engine, 'puzzles'):
                 self.engine.current_selection = list(self.engine.puzzles)
-                self.load_puzzle(0)
+                self.load_puzzle()
                 messagebox.showinfo(self.t("info"), self.t("filter_removed_msg"))
 
 
