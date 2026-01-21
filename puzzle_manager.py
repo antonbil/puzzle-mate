@@ -1,5 +1,5 @@
 
-
+import collections
 import chess
 import re
 import chess.pgn
@@ -19,6 +19,26 @@ TRANSLATIONS = {
 "piece_set": "Piece Set","exit_window": "Close Window",
 "board_size": "Board Size", "small": "Small", "medium": "Medium", "large": "Large","extra_large": "Extra Large", "huge": "Huge",
 "orientation": "Orientation", "portrait": "Portrait", "landscape": "Landscape",
+"analyze_db": "Analyze Database",
+        "analysis_title": "Database Analysis",
+        "db_overview": "Database Overview",
+        "total_puzzles": "Total Puzzles",
+        "rating_range": "Rating Range",
+        "avg_rating": "Average Rating",
+        "top_themes": "Top Themes",
+        "no_puzzles_loaded": "No puzzles loaded to analyze.",
+        "info": "Information",
+        # Common Chess Themes
+        "mate_in_1": "Mate in 1",
+        "mate_in_2": "Mate in 2",
+        "advantage": "Advantage",
+        "endgame": "Endgame",
+        "tactic": "Tactic",
+"maintenance": "Maintenance",
+        "run_validation": "Check for Invalid Puzzles",
+        "validation_result": "Validation Result",
+        "all_puzzles_valid": "All puzzles are structurally sound!",
+        "errors_found": "Invalid puzzles detected",
         "score": "Score", "done": "Done", "solved": "Solved", "attempts": "Attempts left",
         "hint": "Hint", "skip": "Skip (-5 pts)", "skip2":"Skip", "correct": "Correct", "solved_msg": "Solved!",
         "failed": "Failed", "out_of_attempts": "Out of attempts.", "white_turn": "WHITE TO MOVE",
@@ -47,6 +67,26 @@ TRANSLATIONS = {
 "piece_set": "Stukken-set","exit_window": "Venster sluiten","board_size": "Bordgrootte", "small": "Klein",
         "medium": "Gemiddeld", "large": "Groot","extra_large": "Extra Groot", "huge": "Gigantisch",
 "orientation": "Oriëntatie", "portrait": "Staand", "landscape": "Liggend",
+"analyze_db": "Analyseer Database",
+        "analysis_title": "Database Analyse",
+        "db_overview": "Database Overzicht",
+        "total_puzzles": "Totaal aantal puzzels",
+        "rating_range": "Rating bereik",
+        "avg_rating": "Gemiddelde rating",
+        "top_themes": "Belangrijkste thema's",
+        "no_puzzles_loaded": "Geen puzzels geladen om te analyseren.",
+        "info": "Informatie",
+        # Veelvoorkomende Thema's
+        "mate_in_1": "Mat in 1",
+        "mate_in_2": "Mat in 2",
+        "advantage": "Voordeel",
+        "endgame": "Eindspel",
+        "tactic": "Tactiek",
+"maintenance": "Onderhoud",
+        "run_validation": "Check op ongeldige puzzels",
+        "validation_result": "Validatie Resultaat",
+        "all_puzzles_valid": "Alle puzzels zijn technisch in orde!",
+        "errors_found": "Ongeldige puzzels gevonden",
         "score": "Score", "done": "Klaar", "solved": "Opgelost", "attempts": "Pogingen over",
         "hint": "Hint", "skip": "Overslaan (-5 pnt)", "skip2":"Overslaan", "correct": "Correct", "solved_msg": "Opgelost!",
         "failed": "Fout", "out_of_attempts": "Geen pogingen meer over.", "white_turn": "WIT AAN ZET",
@@ -193,39 +233,6 @@ def load_svg_piece(filename, size):
     return ImageTk.PhotoImage(image)
 
 
-def _animate_piece(self, from_sq, to_sq, callback):
-    """ Universal animation handler with an animation lock. """
-    self.is_animating = True
-
-    piece_id = self.drawn_pieces.get(from_sq)
-    if not piece_id:
-        self.is_animating = False
-        callback()
-        return
-
-    def get_pos(sq):
-        f, r = chess.square_file(sq), chess.square_rank(sq)
-        col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
-        return col * self.field_size, row * self.field_size
-
-    start_x, start_y = get_pos(from_sq)
-    target_x, target_y = get_pos(to_sq)
-    self.canvas.tag_raise(piece_id)
-
-    steps = 12
-    dx = (target_x - start_x) / steps
-    dy = (target_y - start_y) / steps
-
-    def step(count):
-        if count < steps:
-            self.canvas.move(piece_id, dx, dy)
-            self.after(12, lambda: step(count + 1))
-        else:
-            self.is_animating = False
-            callback()
-
-    step(0)
-
 def load_images(piece_set, size=60):
     piece_images = {}
     # Use the selected piece_set)
@@ -273,6 +280,64 @@ class Translator:
         return self.translations.get(self.fallback_lang, {}).get(key, key)
 
 t = Translator(TRANSLATIONS, default_lang="en")
+
+
+class PuzzleValidator:
+    """
+    Utility class to verify the structural integrity of chess puzzles.
+    Checks if FENs are valid and if all moves in the solution are legal.
+    """
+
+    def __init__(self, puzzles):
+        # puzzles is the list of dictionaries from your _load_puzzles method
+        self.puzzles = puzzles
+
+    def validate_all(self):
+        """
+        Validates the entire list of puzzles.
+        Returns a list of invalid puzzles with their reasons.
+        """
+        invalid_puzzles = []
+
+        for index, p in enumerate(self.puzzles):
+            reason = self._check_puzzle(p)
+            if reason:
+                invalid_puzzles.append({
+                    'index': index + 1,
+                    'name': p.get('display_name') or f"Puzzle #{index + 1}",
+                    'reason': reason,
+                    'site': p.get('site', '')
+                })
+
+        return invalid_puzzles
+
+    def _check_puzzle(self, p):
+        """
+        Internal check for a single puzzle dictionary.
+        Returns a string reason if invalid, None if valid.
+        """
+        try:
+            # 1. Validate FEN
+            board = chess.Board(p['fen'])
+            if not board.is_valid():
+                return "Invalid FEN/Starting Position"
+
+            # 2. Check initial move (if present)
+            if p['initial_move']:
+                if p['initial_move'] not in board.legal_moves:
+                    return f"Illegal initial move: {p['initial_move']}"
+                board.push(p['initial_move'])
+
+            # 3. Check solution sequence
+            for i, move in enumerate(p['solution']):
+                if move not in board.legal_moves:
+                    # Return which move in the sequence failed
+                    return f"Illegal move at step {i + 1}: {move}"
+                board.push(move)
+
+            return None  # Puzzle is valid
+        except Exception as e:
+            return f"System error during validation: {str(e)}"
 
 # --- ENGINE ---
 
@@ -380,6 +445,60 @@ class PuzzleEngine:
         if not remaining: return None
         self.current_index = random.choice(remaining)
         return self.puzzles[self.current_index]
+
+    def analyze_database(self):
+        """
+        Analyzes the loaded puzzles (list of dicts) to extract statistical insights.
+        All comments are in English as per instructions.
+        """
+        total = len(self.puzzles)
+        themes_count = collections.Counter()
+        ratings = []
+
+        # Regex to find ratings inside parentheses like (2121) in player names
+        rating_pattern = r"\((\d+)\)"
+
+        for p in self.puzzles:
+            # 1. Process Themes
+            # If 'themes' is a string like "mateIn2, short", split by comma
+            raw_themes = p.get('themes', '')
+            if raw_themes:
+                # Split by comma or semicolon and clean whitespace
+                individual_themes = [t.strip() for t in re.split(r'[,;]', raw_themes) if t.strip()]
+                for theme in individual_themes:
+                    themes_count[theme] += 1
+            else:
+                # Fallback to 'event' if no themes are present
+                event_theme = p.get('event', 'Unknown')
+                themes_count[event_theme] += 1
+
+            # 2. Extract Ratings
+            # Check the 'rating' key first
+            r_val = p.get('rating', 'N/A')
+
+            # If rating is missing or N/A, try to extract from white/black names
+            if r_val == "N/A" or not str(r_val).isdigit():
+                full_names = p.get('white', '') + p.get('black', '')
+                match = re.search(rating_pattern, full_names)
+                if match:
+                    r_val = match.group(1)
+
+            try:
+                # Only add to list if it's a valid integer
+                if str(r_val).isdigit():
+                    ratings.append(int(r_val))
+            except ValueError:
+                continue
+
+        # Build the final statistics dictionary
+        stats = {
+            "total": total,
+            "themes": dict(themes_count.most_common(12)),
+            "min_rating": min(ratings) if ratings else "N/A",
+            "max_rating": max(ratings) if ratings else "N/A",
+            "avg_rating": sum(ratings) // len(ratings) if ratings else "N/A"
+        }
+        return stats
 
 
 # --- CUSTOM WIDGETS ---
@@ -564,6 +683,39 @@ class HistoryDetailWindow(tk.Toplevel):
 
         self.move_text_container.config(state=tk.DISABLED)
 
+    def _animate_piece(self, from_sq, to_sq, callback):
+        """ Universal animation handler with an animation lock. """
+        self.is_animating = True
+
+        piece_id = self.drawn_pieces.get(from_sq)
+        if not piece_id:
+            self.is_animating = False
+            callback()
+            return
+
+        def get_pos(sq):
+            f, r = chess.square_file(sq), chess.square_rank(sq)
+            col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
+            return col * self.field_size, row * self.field_size
+
+        start_x, start_y = get_pos(from_sq)
+        target_x, target_y = get_pos(to_sq)
+        self.canvas.tag_raise(piece_id)
+
+        steps = 12
+        dx = (target_x - start_x) / steps
+        dy = (target_y - start_y) / steps
+
+        def step(count):
+            if count < steps:
+                self.canvas.move(piece_id, dx, dy)
+                self.after(12, lambda: step(count + 1))
+            else:
+                self.is_animating = False
+                callback()
+
+        step(0)
+
     def _jump_to_move(self, index):
         """
         Jumps to a specific move index, animating the final move for visual clarity.
@@ -571,7 +723,7 @@ class HistoryDetailWindow(tk.Toplevel):
         if getattr(self, "is_animating", False):
             return
         # 1. Update the current step
-        self.current_step = index
+        #self.current_step = index
 
         # 2. Rebuild the board to the state BEFORE the clicked move
         # If index is 5, we want the board at step 4, then animate move 5.
@@ -580,17 +732,26 @@ class HistoryDetailWindow(tk.Toplevel):
         #     self.board.push(self.solution_moves[i])
 
         # 3. Get the move that needs to be animated
-        if index > 0:
+        if index >= 0:
             move_to_animate = self.solution_moves[index - 1]
             from_sq = move_to_animate.from_square
             to_sq = move_to_animate.to_square
 
             # Draw the board at the 'n-1' state so the piece is at its starting position
-            self.review_board = chess.Board(self.initial_fen)  # Or wherever your start is
-            for i in range(index - 1):
-                self.review_board.push(self.solution_moves[i])
-            self.current_step = index - 1
+            min1 = self.current_step - index
+            plus = index - self.current_step
+            if plus > 0:
+
+              for i in range(plus):
+                  self.review_board.push(self.solution_moves[self.current_step+i])
+            else:
+              if min1 > 0:
+
+                for i in range(min1):
+                    self.review_board.pop()
+            self.current_step = index
             self._update_display()
+            return
 
             # Define what happens when the animation finishes
             def finalize_jump():
@@ -601,7 +762,7 @@ class HistoryDetailWindow(tk.Toplevel):
 
             # Start the universal animation
             # Note: If from_sq to to_sq is the move, we animate it forward
-            _animate_piece(self, from_sq, to_sq, finalize_jump)
+            self._animate_piece(from_sq, to_sq, finalize_jump)
         else:
             # If we jump to the very beginning (index 0), no animation is needed
             self.last_move_squares = []
@@ -609,8 +770,11 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def _next_move(self):
         if self.current_step < len(self.solution_moves):
+            print("add step", self.current_step)
+            self.review_board.push(self.solution_moves[self.current_step])
             self.current_step += 1
-            self._jump_to_move(self.current_step)
+            self._update_display()
+            #self._jump_to_move(self.current_step)
 
     def _prev_move(self):
         if self.current_step > 0:
@@ -619,6 +783,8 @@ class HistoryDetailWindow(tk.Toplevel):
             self._update_display()
 
     def refresh_board(self):
+        if self.is_animating:
+            return
         self.canvas.delete("all")
         size = self.field_size
         colors = self.themes[self.board_theme]
@@ -638,6 +804,7 @@ class HistoryDetailWindow(tk.Toplevel):
         for square, piece in self.review_board.piece_map().items():
             f, r = chess.square_file(square), chess.square_rank(square)
             col, row = (7 - f, r) if self.is_flipped else (f, 7 - r)
+            #print(f"Drawing {piece.symbol()} at {square}")
             img = self.piece_images.get(piece.symbol())
             if img:
                 piece_id = self.canvas.create_image(col * size, row * size, image=img, anchor=tk.NW, tags=("piece",))
@@ -787,6 +954,86 @@ class HistoryWindow(tk.Toplevel):
                                 board_theme=self.parent.board_theme, themes=self.parent.themes, piece_set=self.piece_set,
                                 config=self.parent.config_data)
 
+
+class AnalysisWindow(tk.Toplevel):
+    def __init__(self, parent, stats):
+        super().__init__(parent)
+        # Assuming parent has access to the translation method
+        self.t = parent.t
+        self.parent = parent
+
+        self.title(self.t("analysis_title"))
+        self.geometry("450x600")
+        self.configure(bg="#f8f9fa")
+
+        # Main Title
+        tk.Label(self, text=self.t("db_overview"), font=("Segoe UI", 16, "bold"),
+                 bg="#f8f9fa", fg="#2c3e50").pack(pady=20)
+        self._add_validation_section(stats)
+        # Statistics Summary Card
+        card = tk.Frame(self, bg="white", padx=20, pady=20, relief=tk.SOLID, borderwidth=1)
+        card.pack(fill=tk.X, padx=30)
+
+        # Helper to create stats rows
+        self._add_stat_row(card, self.t("total_puzzles"), stats['total'])
+        self._add_stat_row(card, self.t("rating_range"), f"{stats['min_rating']} - {stats['max_rating']}")
+        self._add_stat_row(card, self.t("avg_rating"), stats['avg_rating'])
+
+        # Themes Section
+        tk.Label(self, text=self.t("top_themes"), font=("Segoe UI", 12, "bold"),
+                 bg="#f8f9fa", fg="#2c3e50").pack(pady=(25, 10))
+
+        # Scrollable area for themes if the list is long
+        list_frame = tk.Frame(self, bg="white", padx=10, pady=10)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=5)
+
+        for theme, count in stats['themes'].items():
+            row = tk.Frame(list_frame, bg="white")
+            row.pack(fill=tk.X, pady=3)
+            # Use translation for theme if it exists in your dictionary
+            display_theme = self.t(theme.lower().replace(" ", "_")) or theme
+            tk.Label(row, text=display_theme, bg="white", fg="#7f8c8d").pack(side=tk.LEFT)
+            tk.Label(row, text=str(count), bg="white", font=("Segoe UI", 10, "bold"),
+                     fg="#2980b9").pack(side=tk.RIGHT)
+
+        # Close button at bottom
+        ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=25)
+
+    def _add_stat_row(self, parent, label, value):
+        """ Internal helper to render a key-value pair in the UI. """
+        row = tk.Frame(parent, bg="white")
+        row.pack(fill=tk.X, pady=5)
+        tk.Label(row, text=f"{label}:", bg="white", font=("Segoe UI", 10)).pack(side=tk.LEFT)
+        tk.Label(row, text=str(value), bg="white", font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT)
+
+    def _add_validation_section(self, stats):
+        """ Adds a button to trigger the puzzle validation tool. """
+        tk.Label(self, text=self.t("maintenance"), font=("Segoe UI", 12, "bold"),
+                 bg="#f8f9fa", fg="#2c3e50").pack(pady=(20, 5))
+
+        self.btn_validate = ttk.Button(
+            self,
+            text=self.t("run_validation"),
+            command=self._run_integrity_check
+        )
+        self.btn_validate.pack(pady=10)
+
+    def _run_integrity_check(self):
+        """ Executes the PuzzleValidator and shows results. """
+        # parent.engine contains the puzzles list
+        validator = PuzzleValidator(self.parent.engine.puzzles)
+        errors = validator.validate_all()
+
+        if not errors:
+            messagebox.showinfo(self.t("validation_result"), self.t("all_puzzles_valid"))
+        else:
+            # Show errors in a simple scrollable list or separate window
+            error_msg = "\n".join([f"#{e['index']} ({e['name']}): {e['reason']}" for e in errors[:10]])
+            if len(errors) > 10:
+                error_msg += f"\n... and {len(errors) - 10} more."
+
+            messagebox.showwarning(self.t("validation_result"),
+                                   f"{self.t('errors_found')}: {len(errors)}\n\n{error_msg}")
 
 class ProgressWindow(tk.Toplevel):
     def __init__(self, parent, results_log):
@@ -1097,6 +1344,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.menubar.add_cascade(label=self.t("view"), menu=view_menu)
         view_menu.add_command(label=self.t("history"), command=lambda: HistoryWindow(self, self.engine, piece_set=self.piece_set))
         view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
+        view_menu.add_command(label=self.t("analyze_db"), command=self._show_db_analysis)
 
         view_menu.add_separator()
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
@@ -1291,6 +1539,18 @@ class ChessPuzzleApp(tk.Toplevel):
         canvas_width = size * 8
         self.canvas.config(width=canvas_width, height=canvas_width)
         self.refresh_board()
+
+    def _show_db_analysis(self):
+        """
+        Triggers the database analysis and opens the stats window.
+        """
+        # Ensure puzzles are loaded before analyzing
+        if not self.engine.puzzles:
+            messagebox.showinfo(self.t("info"), self.t("no_puzzles_loaded"))
+            return
+        stats = self.engine.analyze_database()
+        # AnalysisWindow is the class we defined in the previous step
+        AnalysisWindow(self, stats)
 
     def _setup_lang_menu(self, parent_menu, translator):
         """ Dynamically builds the language selection menu. """
