@@ -773,9 +773,7 @@ class HistoryDetailWindow(tk.Toplevel):
 
     def _prev_move(self):
         if self.current_step > 0:
-            self.review_board.pop()
-            self.current_step -= 1
-            self._update_display()
+            self._jump_to_move(self.current_step - 1)
 
     def refresh_board(self):
         if self.is_animating:
