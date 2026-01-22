@@ -72,6 +72,9 @@ TRANSLATIONS = {
         "themes":"themes","puzzle_name":"Puzzle Name","status":"Status","settings": "Settings",
         "board_color": "Board Color", "color_green": "Classic Green", "color_blue": "Ocean Blue",
         "color_brown": "Wood Brown", "color_gray": "Modern Gray","back":"Back", "forward":"Forward", "close":"Close",
+"overall_progress_title": "Overall Progress Dashboard","overall_performance":"Overall Performance",'total_score':'Total Score',"file_url":"File url",
+    "puzzles_solved": "puzzles solved in total",
+"file_size": "File Size",
 "color_purple": "Royal Purple",
 "color_night": "Midnight Blue",
 "color_sand": "Desert Sand",
@@ -110,6 +113,8 @@ TRANSLATIONS = {
     "max": "Max:",
     "clear": "Wissen",
 "remove_filter": "Filter Verwijderen",
+"overall_progress_title": "Totaaloverzicht Voortgang","overall_performance":"Totale Voortgang",'total_score':'Totaal-Score',"file_url":"File url",
+    "puzzles_solved": "puzzels in totaal opgelost","file_size": "Bestandsgrootte",
     "filter_removed_msg": "Filter verwijderd. Alle puzzels worden getoond.",
         "run_validation": "Check op ongeldige puzzels",
         "validation_result": "Validatie Resultaat",
@@ -585,6 +590,110 @@ class PuzzleEngine:
             "avg_rating": sum(ratings) // len(ratings) if ratings else "N/A"
         }
         return stats
+
+    def get_overall_progress_data(self, config_data):
+        """
+        English: Aggregates data using file size instead of puzzle counts for speed.
+        """
+        overall_files = []
+        grand_total_solved = 0
+        grand_total_score = 0
+        # English: We can't really sum 'performance' easily with mixed file sizes,
+        # so we'll focus on absolute totals.
+
+        recent_files = config_data.get("recent_files", [])
+        for file_path in recent_files:
+            if not os.path.exists(file_path):
+                continue
+
+            base_path = os.path.splitext(file_path)[0]
+            results_path = f"{base_path}_results.json"
+
+            solved_count = 0
+            file_score = 0
+
+            if os.path.exists(results_path):
+                try:
+                    with open(results_path, 'r') as f:
+                        data = json.load(f)
+                        log = data.get("results_log", [])
+                        solved_count = len(log)
+                        file_score = sum(entry[1] for entry in log if len(entry) > 1)
+                except Exception as e:
+                    print(f"Error loading {results_path}: {e}")
+
+            # English: Get file size in MB for a cleaner display
+            file_size_bytes = os.path.getsize(file_path)
+            file_size_mb = file_size_bytes / (1024 * 1024)
+
+            overall_files.append({
+                'name': os.path.basename(file_path),
+                'full_path': file_path,
+                'size_mb': file_size_mb,
+                'solved': solved_count,
+                'score': file_score
+            })
+
+            grand_total_solved += solved_count
+            grand_total_score += file_score
+
+        return {
+            'files': overall_files,
+            'total_score': grand_total_score,
+            'total_solved': grand_total_solved
+        }
+
+    def get_overall_stats(self):
+        """
+        English: Gathers stats from config.json and the corresponding _results.json files.
+        """
+        overall_stats = []
+        grand_total_puzzles = 0
+        grand_total_solved = 0
+
+        for file_path in self.recent_files:
+            if not os.path.exists(file_path):
+                continue
+
+            # English: Matches your example: filename + "_results.json"
+            base_path = os.path.splitext(file_path)[0]
+            results_path = f"{base_path}_results.json"
+
+            solved_count = 0
+            total_score = 0
+
+            if os.path.exists(results_path):
+                try:
+                    with open(results_path, 'r') as f:
+                        data = json.load(f)
+                        # English: solved_count is the number of entries in results_log
+                        log = data.get("results_log", [])
+                        solved_count = len(log)
+                        # English: Sum of the second element in each pair [index, score]
+                        total_score = sum(entry[1] for entry in log if len(entry) > 1)
+                except Exception as e:
+                    print(f"Error reading {results_path}: {e}")
+
+            total_in_pgn = self._quick_count_pgn(file_path)
+
+            overall_stats.append({
+                'path': file_path,
+                'name': os.path.basename(file_path),
+                'total_count': total_in_pgn,
+                'solved_count': solved_count,
+                'score': total_score
+            })
+
+            grand_total_puzzles += total_in_pgn
+            grand_total_solved += solved_count
+
+        performance = (grand_total_solved / grand_total_puzzles * 100) if grand_total_puzzles > 0 else 0
+
+        return {
+            'files': overall_stats,
+            'performance': performance,
+            'total_score': sum(f['score'] for f in overall_stats)
+        }
 
 
 # --- CUSTOM WIDGETS ---
@@ -1391,6 +1500,97 @@ class AnalysisWindow(tk.Toplevel):
             messagebox.showwarning(self.t("validation_result"),
                                    f"{self.t('errors_found')}: {len(errors)}\n\n{error_msg}")
 
+
+class OverallProgressWindow(tk.Toplevel):
+    def __init__(self, parent, stats):
+        super().__init__(parent)
+        self.parent = parent
+        self.t = parent.t
+
+        self.title(self.t("overall_progress_title"))
+        self.geometry("750x700")
+        self.configure(bg="#f8f9fa")
+
+        # --- Summary Header ---
+        summary_bg = "#2c3e50"
+        summary_frame = tk.Frame(self, bg=summary_bg, pady=25)
+        summary_frame.pack(fill=tk.X)
+
+        # English: Display global metrics
+        tk.Label(summary_frame, text=self.t("overall_performance"),
+                 bg=summary_bg, fg="#bdc3c7", font=("Segoe UI", 11)).pack()
+
+        score_text = f"{self.t('total_score')}: {stats['total_score']} | {stats['total_solved']} {self.t('puzzles_solved')}"
+        tk.Label(summary_frame, text=score_text,
+                 bg=summary_bg, fg="#2ecc71", font=("Segoe UI", 16, "bold")).pack(pady=5)
+
+        # --- List Header ---
+        header_frame = tk.Frame(self, bg="#dfe6e9", padx=20, pady=10)
+        header_frame.pack(fill=tk.X, pady=(15, 0))
+
+        tk.Label(header_frame, text=self.t("file_url"), width=40, anchor="w", bg="#dfe6e9",
+                 font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT)
+        tk.Label(header_frame, text=self.t("score"), width=12, anchor="e", bg="#dfe6e9",
+                 font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT)
+        tk.Label(header_frame, text=self.t("file_size"), width=15, anchor="e", bg="#dfe6e9",
+                 font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT)
+
+        # --- Scrollable Area ---
+        container = tk.Frame(self, bg="white")
+        container.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+
+        canvas = tk.Canvas(container, bg="white", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview, style="Thick.Vertical.TScrollbar")
+        scroll_frame = tk.Frame(canvas, bg="white")
+
+        scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas_win = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(canvas_win, width=e.width))
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        for f in stats['files']:
+            row = tk.Frame(scroll_frame, bg="white", pady=15)
+            row.pack(fill=tk.X)
+
+            # English: Left side - File details
+            info_frame = tk.Frame(row, bg="white")
+            info_frame.pack(side=tk.LEFT, padx=10)
+            tk.Label(info_frame, text=f['name'], bg="white", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+
+            short_path = (f['full_path'][-50:] if len(f['full_path']) > 50 else f['full_path'])
+            tk.Label(info_frame, text=short_path, bg="white", font=("Consolas", 8), fg="#7f8c8d").pack(anchor="w")
+
+            # English: Right side - Metrics
+            tk.Label(row, text=f"{f['score']} pts", width=12, anchor="e", bg="white", fg="#2980b9",
+                     font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT, padx=5)
+
+            # English: Display size in MB
+            size_txt = f"{f['size_mb']:.2f} MB"
+            tk.Label(row, text=size_txt, width=12, anchor="e", bg="white", fg="#7f8c8d").pack(side=tk.RIGHT, padx=5)
+
+            # English: Solved count as a small badge
+            tk.Label(row, text=f"✓ {f['solved']}", bg="#e8f5e9", fg="#2e7d32", padx=5).pack(side=tk.RIGHT, padx=10)
+
+            tk.Frame(scroll_frame, height=1, bg="#f1f2f6").pack(fill=tk.X)
+
+        # English: Standard mousewheel binding
+        def _on_mousewheel(event):
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+            else:
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<Button-4>", _on_mousewheel)
+        canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=20)
+
 class ProgressWindow(tk.Toplevel):
     def __init__(self, parent, results_log):
         super().__init__(parent)
@@ -1703,6 +1903,7 @@ class ChessPuzzleApp(tk.Toplevel):
         view_menu.add_command(label=self.t("progress"), command=lambda: ProgressWindow(self, self.engine.results_log))
         view_menu.add_command(label=self.t("analyze_db"), command=self._show_db_analysis)
         view_menu.add_command(label=self.t("menu_filter"), command=self._open_filter_window)
+        view_menu.add_command(label=self.t("overall_progress_title"), command=self._show_overall_progress)
 
         view_menu.add_separator()
         view_menu.add_command(label=self.t("reset"), command=self._confirm_reset)
@@ -1907,6 +2108,15 @@ class ChessPuzzleApp(tk.Toplevel):
 
         # English: Open the window and pass the stats object
         FilterWindow(self, stats)
+
+    def _show_overall_progress(self):
+        """
+        English: Triggers data collection and shows the overall progress dashboard.
+        """
+        # English: Collect data via the engine
+        stats = self.engine.get_overall_progress_data(self.config_data)
+        # English: Open the newly named window
+        OverallProgressWindow(self, stats)
 
     def _show_db_analysis(self):
         """
