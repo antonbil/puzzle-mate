@@ -493,9 +493,40 @@ class PuzzleEngine:
                 while True:
                     game = chess.pgn.read_game(f)
                     if game is None: break
+
                     moves = list(game.mainline_moves())
-                    w = game.headers.get("White", "").strip()
-                    b = game.headers.get("Black", "").strip()
+                    headers = game.headers
+
+                    w = headers.get("White", "").strip()
+                    b = headers.get("Black", "").strip()
+
+                    # --- Advanced Rating Detection Logic ---
+                    # 1. Try standard Rating tag first, then Elo tags
+                    raw_rating = headers.get("Rating", "")
+                    white_elo = headers.get("WhiteElo", "")
+                    black_elo = headers.get("BlackElo", "")
+
+                    extracted_rating = "N/A"
+
+                    if raw_rating and raw_rating not in ["?", "N/A"]:
+                        extracted_rating = raw_rating
+                    elif white_elo and white_elo != "?":
+                        extracted_rating = white_elo
+                    elif black_elo and black_elo != "?":
+                        extracted_rating = black_elo
+                    else:
+                        # 2. Fallback: Scan player names for patterns like "(2121)"
+                        # English: Using regex to find digits inside parentheses
+                        pattern = r"\((\d+)\)"
+                        match_w = re.search(pattern, w)
+                        match_b = re.search(pattern, b)
+
+                        if match_w:
+                            extracted_rating = match_w.group(1)
+                        elif match_b:
+                            extracted_rating = match_b.group(1)
+
+                    # --- End Rating Logic ---
 
                     # Distinguish between training format (one mistake first) and normal PGN
                     is_training = "wins" in w.lower() or "wins" in b.lower()
@@ -511,17 +542,17 @@ class PuzzleEngine:
                         display_name = " - ".join(names) if len(names) > 1 else (names[0] if names else "")
 
                     p_list.append({
-                        'fen': game.headers.get("FEN"),
+                        'fen': headers.get("FEN"),
                         'initial_move': initial_move,
                         'white': w,
                         'black': b,
                         'solution': solution,
                         'display_name': display_name,
-                        'date': game.headers.get("Date", ""),
-                        'event': game.headers.get("Event", "Chess Puzzle"),
-                        'site': game.headers.get("Site", ""),  # Link to Lichess
-                        'rating': game.headers.get("Rating", "N/A"),
-                        'themes': game.headers.get("Themes", "")
+                        'date': headers.get("Date", ""),
+                        'event': headers.get("Event", "Chess Puzzle"),
+                        'site': headers.get("Site", ""),  # Link to Lichess
+                        'rating': extracted_rating,  # English: Using our new extracted rating
+                        'themes': headers.get("Themes", "")
                     })
         except Exception as e:
             print(f"PGN Error: {e}")
@@ -712,7 +743,7 @@ class FilterWindow(tk.Toplevel):
 
         self.title(self.t("filter_title"))
         # Increased height to show more themes at once
-        self.geometry("480x800")
+        self.geometry("480x850")
         self.configure(bg="#f8f9fa")
         self.resizable(False, False)
 
@@ -834,6 +865,57 @@ class FilterWindow(tk.Toplevel):
                                                                                              fill=tk.X, padx=2)
         ttk.Button(btn_frame, text=self.t("cancel"), command=self.destroy).pack(side=tk.LEFT, expand=True, fill=tk.X,
                                                                                 padx=2)
+        # Track which entry currently has focus for the keypad
+        self.active_entry = self.min_rating
+        self.min_rating.bind("<FocusIn>", lambda e: self._set_active(self.min_rating))
+        self.max_rating.bind("<FocusIn>", lambda e: self._set_active(self.max_rating))
+
+        # --- Numeric Keypad Section ---
+        keypad_frame = tk.Frame(self, bg="#f8f9fa")
+        keypad_frame.pack(pady=10)
+
+        buttons = [
+            '1', '2', '3',
+            '4', '5', '6',
+            '7', '8', '9',
+            'C', '0', '←'
+        ]
+
+        r, c = 0, 0
+        for btn_text in buttons:
+            cmd = lambda t=btn_text: self._keypad_press(t)
+            # Large buttons are easier to hit on a touchscreen
+            btn = tk.Button(keypad_frame, text=btn_text, width=5, height=2,
+                            font=("Segoe UI", 10, "bold"), command=cmd,
+                            bg="#ffffff", activebackground="#e1e8ed")
+            btn.grid(row=r, column=c, padx=2, pady=2)
+            c += 1
+            if c > 2:
+                c = 0
+                r += 1
+
+    def _set_active(self, entry):
+        """ Remembers which entry field the user is typing into. """
+        self.active_entry = entry
+        # Visual hint for active field
+        self.min_rating.config(bg="white")
+        self.max_rating.config(bg="white")
+        entry.config(bg="#e8f0fe")
+
+    def _keypad_press(self, key):
+        """ Handles input from the internal numeric keypad. """
+        if not self.active_entry: return
+
+        current_val = self.active_entry.get()
+
+        if key == 'C':
+            self.active_entry.delete(0, tk.END)
+        elif key == '←':
+            self.active_entry.delete(len(current_val) - 1, tk.END)
+        else:
+            # Only allow numbers and prevent extremely long ratings
+            if len(current_val) < 4:
+                self.active_entry.insert(tk.END, key)
 
     def _select_theme(self, theme):
         """ Sets active theme and auto-enables the checkbox. """
@@ -862,6 +944,7 @@ class FilterWindow(tk.Toplevel):
                 'min_rating': int(self.min_rating.get() or 0),
                 'max_rating': int(self.max_rating.get() or 9999)
             }
+
             # Persistence
             self.parent.last_use_theme = filters['use_theme']
             self.parent.last_use_rating = filters['use_rating']
