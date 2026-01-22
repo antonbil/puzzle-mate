@@ -1507,98 +1507,114 @@ class HistoryWindow(tk.Toplevel):
 class AnalysisWindow(tk.Toplevel):
     def __init__(self, parent, stats, theme):
         super().__init__(parent)
-        # Assuming parent has access to the translation method
         self.t = parent.t
         self.parent = parent
         self.theme = theme
 
+        # English: Map theme colors
+        bg_color = self.theme["light"]
+        header_color = self.theme["dark"]
+        accent_color = self.theme["frame"]
+        text_on_dark = "#ffffff"
+        text_on_light = self.theme["inner_line"]
+
         self.title(self.t("analysis_title"))
-        self.geometry("450x600")
-        self.configure(bg="#f8f9fa")
+        self.geometry("450x650")
+        self.configure(bg=bg_color)
 
-        # Main Title
+        # English: Create an extra thick style for the scrollbar (35px is very touch-friendly)
+        style = ttk.Style()
+        style.theme_use('clam')  # 'clam' allows for better custom styling than 'default'
+        style.configure("ExtraThick.Vertical.TScrollbar",
+                        gripperpresent=True,
+                        width=35,
+                        arrowsize=25)
+
+        # Main Title - Themed Header
         tk.Label(self, text=self.t("db_overview"), font=("Segoe UI", 16, "bold"),
-                 bg="#f8f9fa", fg="#2c3e50").pack(pady=20)
+                 bg=header_color, fg=text_on_dark, pady=15).pack(fill=tk.X)
+
         self._add_validation_section(stats)
-        # Statistics Summary Card
-        card = tk.Frame(self, bg="white", padx=20, pady=20, relief=tk.SOLID, borderwidth=1)
-        card.pack(fill=tk.X, padx=30)
 
-        # Helper to create stats rows
-        self._add_stat_row(card, self.t("total_puzzles"), stats['total'])
-        self._add_stat_row(card, self.t("rating_range"), f"{stats['min_rating']} - {stats['max_rating']}")
-        self._add_stat_row(card, self.t("avg_rating"), stats['avg_rating'])
+        # Statistics Summary Card - Themed
+        card = tk.Frame(self, bg=bg_color, padx=20, pady=20,
+                        relief=tk.SOLID, borderwidth=1, highlightbackground=accent_color)
+        card.pack(fill=tk.X, padx=30, pady=15)
 
-        # Themes Section
+        # Helper to create stats rows (Modified to pass colors)
+        self._add_stat_row(card, self.t("total_puzzles"), stats['total'], bg_color, text_on_light)
+        self._add_stat_row(card, self.t("rating_range"), f"{stats['min_rating']} - {stats['max_rating']}", bg_color,
+                           text_on_light)
+        self._add_stat_row(card, self.t("avg_rating"), stats['avg_rating'], bg_color, text_on_light)
+
+        # Themes Section Title
         tk.Label(self, text=self.t("top_themes"), font=("Segoe UI", 12, "bold"),
-                 bg="#f8f9fa", fg="#2c3e50").pack(pady=(25, 10))
+                 bg=bg_color, fg=accent_color).pack(pady=(15, 5))
 
-        # 1. Create a container frame for the Canvas and Scrollbar
+        # 1. Container for Canvas (Limited height for better layout)
         container = tk.Frame(self, bg="white", relief=tk.SOLID, borderwidth=1)
         container.pack(fill=tk.BOTH, expand=True, padx=30, pady=5)
 
-        # 2. Create the Canvas
+        # 2. Canvas with Thick Scrollbar
         canvas = tk.Canvas(container, bg="white", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        # English: Using the same thick scrollbar style for Chromebook touch consistency
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview,
+    style="ExtraThick.Vertical.TScrollbar")
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # 3. This is the frame that will actually hold the themes
         scrollable_frame = tk.Frame(canvas, bg="white")
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
-        # Configure the canvas to work with the scrollbar
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        canvas_win = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        # English: Auto-width adjustment
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(canvas_win, width=e.width))
 
-        # Place the frame inside the canvas
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw", width=370)  # Set width to match your UI
         canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Pack Canvas and Scrollbar
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # 4. Fill the scrollable_frame with themes
-        # Loop through themes and make them interactive
-        for theme, count in stats['themes'].items():
-            # Create a frame that acts as a button
+        # 4. Fill with themes
+        for theme_name, count in stats['themes'].items():
             row = tk.Frame(scrollable_frame, bg="white", cursor="hand2")
-            row.pack(fill=tk.X, pady=3, padx=10)
+            row.pack(fill=tk.X, pady=1, padx=2)
 
-            trans_key = theme.lower().replace(" ", "_")
-            display_theme = self.t(trans_key) or theme
+            trans_key = theme_name.lower().replace(" ", "_")
+            display_theme = self.t(trans_key) or theme_name
 
-            # Create the labels inside the frame
-            lbl_name = tk.Label(row, text=display_theme, bg="white", fg="#7f8c8d", cursor="hand2")
-            lbl_name.pack(side=tk.LEFT)
+            lbl_name = tk.Label(row, text=display_theme, bg="white", fg="#34495e", font=("Segoe UI", 9))
+            lbl_name.pack(side=tk.LEFT, padx=10, pady=5)
 
+            # English: Count uses the 'dark' theme color to stand out
             lbl_count = tk.Label(row, text=str(count), bg="white", font=("Segoe UI", 10, "bold"),
-                                 fg="#2980b9", cursor="hand2")
-            lbl_count.pack(side=tk.RIGHT)
+                                 fg=header_color)
+            lbl_count.pack(side=tk.RIGHT, padx=10)
 
-            # Bind the click event to the frame and its children
+            # Binding and Hover
             for widget in (row, lbl_name, lbl_count):
-                widget.bind("<Button-1>", lambda e, t=theme: self._on_theme_click(t))
+                widget.bind("<Button-1>", lambda e, t=theme_name: self._on_theme_click(t))
 
-            # Optional hover effect
-            row.bind("<Enter>", lambda e, r=row: r.configure(bg="#f0f7ff"))
-            row.bind("<Leave>", lambda e, r=row: r.configure(bg="white"))
+            # English: Hover effect uses a lighter version of the dark theme color
+            row.bind("<Enter>", lambda e: row.configure(bg="#f8f9fa"))
+            row.bind("<Leave>", lambda e: row.configure(bg="white"))
 
-        # 5. Enable mouse wheel scrolling for Chromebook touchpad
-        def _on_mousewheel(event):
-            # Standard Linux mouse wheel handling (Button 4/5 or delta)
-            if event.num == 4:
-                canvas.yview_scroll(-1, "units")
-            elif event.num == 5:
-                canvas.yview_scroll(1, "units")
-            else:
-                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        # 5. Mousewheel handling (Same as FilterWindow)
+        # ... (je bestaande _on_mousewheel code hier) ...
 
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)  # Windows/MacOS
-        canvas.bind_all("<Button-4>", _on_mousewheel)  # Linux (Ubuntu)
-        canvas.bind_all("<Button-5>", _on_mousewheel)  # Linux (Ubuntu)
-        # Close button at bottom
-        ttk.Button(self, text=self.t("close"), command=self.destroy).pack(pady=25)
+        # Action Buttons
+        btn_frame = tk.Frame(self, bg=bg_color)
+        btn_frame.pack(fill=tk.X, pady=20)
+
+        tk.Button(btn_frame, text=self.t("close"), command=self.destroy,
+                  bg=header_color, fg=text_on_dark, font=("Segoe UI", 10, "bold"),
+                  activebackground=accent_color, padx=30, pady=5).pack()
+
+    def _add_stat_row(self, parent, label, value, bg, fg):
+        """ English: Updated helper to accept theme colors. """
+        row = tk.Frame(parent, bg=bg)
+        row.pack(fill=tk.X, pady=2)
+        tk.Label(row, text=label, bg=bg, fg=fg, font=("Segoe UI", 10)).pack(side=tk.LEFT)
+        tk.Label(row, text=str(value), bg=bg, fg=fg, font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT)
 
     def _on_theme_click(self, theme_name):
         """
@@ -1614,13 +1630,6 @@ class AnalysisWindow(tk.Toplevel):
             # For example, you could trigger a search in your main window:
             self.parent.apply_filter(theme_name)  # You would need to create this method
             self.destroy()  # Close the analysis window
-
-    def _add_stat_row(self, parent, label, value):
-        """ Internal helper to render a key-value pair in the UI. """
-        row = tk.Frame(parent, bg="white")
-        row.pack(fill=tk.X, pady=5)
-        tk.Label(row, text=f"{label}:", bg="white", font=("Segoe UI", 10)).pack(side=tk.LEFT)
-        tk.Label(row, text=str(value), bg="white", font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT)
 
     def _add_validation_section(self, stats):
         """ Adds a button to trigger the puzzle validation tool. """
