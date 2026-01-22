@@ -147,111 +147,117 @@ TRANSLATIONS = {
 "color_emerald": "Smaragd Mint"
     },
     "de": {
-"lang_name": "Deutsch","exit_window": "Fenster schließen","board_size": "Brettgröße",
+        "lang_name": "Deutsch",
+        "piece_set": "Figurensatz",
+        "exit_window": "Fenster schließen",
+        "board_size": "Brettgröße",
         "small": "Klein",
         "medium": "Mittel",
         "large": "Groß",
-        "extra_large": "Extragroß",
+        "extra_large": "Extra Groß",
         "huge": "Riesig",
-"orientation": "Ausrichtung", "portrait": "Hochformat", "landscape": "Querformat",
-        "score": "Punktestand", "done": "Fertig", "solved": "Gelöst", "attempts": "Versuche übrig",
-        "hint": "Hinweis", "skip": "Überspringen (-5 Pkt)", "skip2":"Überspringen", "correct": "Richtig", "solved_msg": "Gelöst!",
-        "failed": "Falsch", "out_of_attempts": "Keine Versuche mehr.", "white_turn": "WEISS AM ZUG",
-        "black_turn": "SCHWARZ AM ZUG", "no_puzzles": "Keine Rätsel aktiv",
-        "load_pgn_msg": "Bitte laden Sie eine PGN-Datei über Datei -> Laden",
-        "file": "Datei", "view": "Ansicht", "history": "Verlauf", "progress": "Fortschritt",
-        "language": "Sprache", "dutch": "Nederlands", "english": "English", "reset": "Fortschritt zurücksetzen...",
-        "all_finished": "Alle Rätsel abgeschlossen!", "confirm_skip": "Lösung anzeigen? (-5 Pkt)",
-        "reset_title": "Fortschritt zurücksetzen", "reset_msg": "Sind Sie sicher, dass Sie den Fortschritt für '{}' löschen wollen?",
-        "perfect": "Perfekt", "partial": "Gelöst", "failed_status": "Fehlgeschlagen", "skipped": "Übersprungen",
-        "review": "Überprüfung", "performance": "Leistungsanalyse", "total_puzzles": "Rätsel insgesamt:",
-        "avg_score": "Durchschn. Punkte:", "current_total": "Gesamtpunktzahl:", "streak": "Längste Serie:",
-        "exit": "Beenden", "open_recent": "Zuletzt geöffnet", "load_pgn":"PGN laden...", "progress_cleared":"Fortschritt wurde gelöscht.",
+        "orientation": "Ausrichtung",
+        "portrait": "Hochformat",
+        "landscape": "Querformat",
+        "analyze_db": "Datenbank analysieren",
+        "analysis_title": "Datenbank-Analyse",
+        "db_overview": "Datenbank-Übersicht",
+        "total_puzzles": "Gesamtanzahl Rätsel",
+        "rating_range": "Rating-Bereich",
+        "avg_rating": "Durchschnittliches Rating",
+        "top_themes": "Top-Motive",
+        "no_puzzles_loaded": "Keine Rätsel zum Analysieren geladen.",
+        "info": "Information",
+        # Common Chess Themes
+        "mate_in_1": "Matt in 1",
+        "mate_in_2": "Matt in 2",
+        "advantage": "Vorteil",
+        "endgame": "Endspiel",
+        "tactic": "Taktik",
+        "maintenance": "Wartung",
+        "run_validation": "Auf ungültige Rätsel prüfen",
+        "validation_result": "Validierungsergebnis",
+        "all_puzzles_valid": "Alle Rätsel sind strukturell einwandfrei!",
+        "errors_found": "Ungültige Rätsel gefunden",
+        "score": "Punktzahl",
+        "done": "Erledigt",
+        "solved": "Gelöst",
+        "attempts": "Verbleibende Versuche",
+        "menu_filter": "Rätsel filtern",
+        "filter_title": "Suchfilter",
+        "filter_settings": "Filter-Einstellungen",
+        "filter_theme": "Motiv (enthält):",
+        "filter_rating_range": "Rating-Bereich:",
+        "apply_filter": "Anwenden",
+        "puzzles_found": "Rätsel gefunden, die den Kriterien entsprechen.",
+        "no_puzzles_found": "Keine Rätsel für diese Filter gefunden.",
+        "min": "Min:",
+        "max": "Max:",
+        "clear": "Löschen",
+        "enable_rating_filter": "Rating-Filter aktivieren",
+        "enable_theme_filter": "Motiv-Filter aktivieren",
+        "filter_removed_msg": "Filter entfernt. Alle Rätsel werden angezeigt.",
+        "hint": "Hinweis",
+        "skip": "Überspringen (-5 Pkt)",
+        "skip2": "Überspringen",
+        "correct": "Richtig",
+        "solved_msg": "Gelöst!",
+        "failed": "Fehlgeschlagen",
+        "out_of_attempts": "Keine Versuche mehr.",
+        "white_turn": "WEISS IST AM ZUG",
+        "black_turn": "SCHWARZ IST AM ZUG",
+        "no_puzzles": "Keine aktiven Rätsel",
+        "load_pgn_msg": "Bitte laden Sie eine PGN-Datei via Datei -> Laden",
+        "file": "Datei",
+        "view": "Ansicht",
+        "history": "Verlauf",
+        "progress": "Fortschritt anzeigen",
+        "language": "Sprache",
+        "dutch": "Nederlands",
+        "english": "English",
+        "reset": "Fortschritt zurücksetzen...",
+        "all_finished": "Alle Rätsel abgeschlossen!",
+        "confirm_skip": "Lösung anzeigen? (-5 Pkt)",
+        "reset_title": "Fortschritt zurücksetzen",
+        "reset_msg": "Sind Sie sicher, dass Sie den gesamten Fortschritt für '{}' zurücksetzen wollen?",
+        "perfect": "Perfekt",
+        "partial": "Gelöst",
+        "failed_status": "Fehlgeschlagen",
+        "skipped": "Übersprungen",
+        "review": "Überprüfen",
+        "performance": "Leistungsanalyse",
+        "avg_score": "Durchschnittliche Punktzahl:",
+        "current_total": "Aktueller Gesamtwert:",
+        "streak": "Längste Serie:",
+        "exit": "Beenden",
+        "open_recent": "Zuletzt geöffnet",
+        "load_pgn": "PGN laden...",
+        "progress_cleared": "Der Fortschritt wurde gelöscht.",
         "no_data_msg": "Noch keine Daten verfügbar.",
-        "footer_msg": "Löse weiter, um dein nächstes Ziel zu erreichen!", "chess_puzzle_manager":"Schach-Rätsel-Manager",
-        "themes":"Themen","puzzle_name":"Rätselname","status":"Status","settings": "Einstellungen",
-    "board_color": "Brettfarbe",
-    "color_green": "Klassisches Grün",
-    "color_blue": "Ozeanblau",
-    "color_brown": "Holzbraun",
-    "color_gray": "Modernes Grau",
-"back": "Zurück", "forward": "Vorwärts", "close": "Schließen",
-"color_purple": "Königliches Violett",
-"color_night": "Mitternachtsblau",
-"color_sand": "Wüstensand",
-"color_emerald": "Smaragdgrün"
-    },
-    "fr": {
-"lang_name": "Français","exit_window": "Fermer la fenêtre","board_size": "Taille du plateau",
-        "small": "Petit",
-        "medium": "Moyen",
-        "large": "Grand",
-        "extra_large": "Très grand",
-        "huge": "Géant",
-"orientation": "Orientation", "portrait": "Portrait", "landscape": "Paysage",
-        "score": "Score", "done": "Terminé", "solved": "Résolu", "attempts": "Tentatives restantes",
-        "hint": "Indice", "skip": "Passer (-5 pts)", "skip2":"Passer", "correct": "Correct", "solved_msg": "Résolu !",
-        "failed": "Échec", "out_of_attempts": "Plus de tentatives.", "white_turn": "LES BLANCS JOUENT",
-        "black_turn": "LES NOIRS JOUENT", "no_puzzles": "Aucun puzzle actif",
-        "load_pgn_msg": "Veuillez charger un fichier PGN via Fichier -> Charger",
-        "file": "Fichier", "view": "Affichage", "history": "Historique", "progress": "Progression",
-        "language": "Langue", "dutch": "Nederlands", "english": "English", "reset": "Réinitialiser la progression...",
-        "all_finished": "Tous les puzzles sont terminés !", "confirm_skip": "Voir la solution ? (-5 pts)",
-        "reset_title": "Réinitialiser la progression", "reset_msg": "Voulez-vous vraiment réinitialiser la progression pour '{}' ?",
-        "perfect": "Parfait", "partial": "Résolu", "failed_status": "Échoué", "skipped": "Passé",
-        "review": "Examen", "performance": "Analyse de performance", "total_puzzles": "Total des puzzles :",
-        "avg_score": "Score moyen :", "current_total": "Total actuel :", "streak": "Plus longue série :",
-        "exit": "Quitter", "open_recent": "Ouvrir récents", "load_pgn":"Charger PGN...", "progress_cleared":"La progression a été effacée.",
-        "no_data_msg": "Aucune donnée disponible pour le moment.",
-        "footer_msg": "Continuez à résoudre pour atteindre votre prochain objectif !", "chess_puzzle_manager":"Gestionnaire de Puzzles d'Échecs",
-        "themes":"thèmes","puzzle_name":"Nom du Puzzle","status":"Statut",
-"settings": "Paramètres",
-    "board_color": "Couleur du plateau",
-    "color_green": "Vert classique",
-    "color_blue": "Bleu océan",
-    "color_brown": "Brun bois",
-    "color_gray": "Gris moderne",
-"back": "Précédent", "forward": "Suivant", "close": "Fermer",
-"color_purple": "Pourpre Royal",
-"color_night": "Bleu de Minuit",
-"color_sand": "Sable du Désert",
-"color_emerald": "Menthe Émeraude"
-    },
-    "es": {
-"lang_name": "Español","exit_window": "Cerrar ventana","board_size": "Tamaño del tablero",
-        "small": "Pequeño",
-        "medium": "Mediano",
-        "large": "Grande",
-        "extra_large": "Muy grande",
-        "huge": "Gigante",
-"orientation": "Orientación", "portrait": "Retrato", "landscape": "Paisaje",
-        "score": "Puntuación", "done": "Hecho", "solved": "Resuelto", "attempts": "Intentos restantes",
-        "hint": "Pista", "skip": "Saltar (-5 pts)", "skip2":"Saltar", "correct": "Correcto", "solved_msg": "¡Resuelto!",
-        "failed": "Fallo", "out_of_attempts": "Sin intentos restantes.", "white_turn": "JUEGAN BLANCAS",
-        "black_turn": "JUEGAN NEGRAS", "no_puzzles": "No hay acertijos activos",
-        "load_pgn_msg": "Cargue un archivo PGN a través de Archivo -> Cargar",
-        "file": "Archivo", "view": "Ver", "history": "Historial", "progress": "Progreso",
-        "language": "Idioma", "dutch": "Nederlands", "english": "English", "reset": "Reiniciar progreso...",
-        "all_finished": "¡Todos los acertijos terminados!", "confirm_skip": "¿Ver solución? (-5 pts)",
-        "reset_title": "Reiniciar progreso", "reset_msg": "¿Está seguro de que desea borrar el progreso de '{}'?",
-        "perfect": "Perfecto", "partial": "Resuelto", "failed_status": "Fallido", "skipped": "Saltado",
-        "review": "Revisión", "performance": "Análisis de rendimiento", "total_puzzles": "Total de acertijos:",
-        "avg_score": "Puntuación media:", "current_total": "Total actual:", "streak": "Racha más larga:",
-        "exit": "Salir", "open_recent": "Abrir recientes", "load_pgn":"Cargar PGN...", "progress_cleared":"Se ha borrado el progreso.",
-        "no_data_msg": "Aún no hay datos disponibles.",
-        "footer_msg": "¡Sigue resolviendo para alcanzar tu próximo hito!", "chess_puzzle_manager":"Gestor de Puzzles de Ajedrez",
-        "themes":"temas","puzzle_name":"Nombre del Puzzle","status":"Estado",
-"settings": "Ajustes",
-    "board_color": "Color del tablero",
-    "color_green": "Verde clásico",
-    "color_blue": "Azul océano",
-    "color_brown": "Marrón madera",
-    "color_gray": "Gris moderno",
-"back": "Atrás", "forward": "Adelante", "close": "Cerrar",
-"color_purple": "Púrpura Real",
-"color_night": "Azul Medianoche",
-"color_sand": "Arena del Desierto",
-"color_emerald": "Menta Esmeralda"
+        "footer_msg": "Löse weiter, um dein nächstes Ziel te erreichen!",
+        "chess_puzzle_manager": "Schachrätsel-Manager",
+        "themes": "Motive",
+        "puzzle_name": "Rätselname",
+        "status": "Status",
+        "settings": "Einstellungen",
+        "board_color": "Brettfarbe",
+        "color_green": "Klassisches Grün",
+        "color_blue": "Ozeanblau",
+        "color_brown": "Holzbraun",
+        "color_gray": "Modernes Grau",
+        "back": "Zurück",
+        "forward": "Vorwärts",
+        "close": "Schließen",
+        "overall_progress_title": "Gesamt-Fortschritt Dashboard",
+        "overall_performance": "Gesamtleistung",
+        "total_score": "Gesamtpunktzahl",
+        "file_url": "Datei-URL",
+        "puzzles_solved": "Rätsel insgesamt gelöst",
+        "file_size": "Dateigröße",
+        "color_purple": "Königliches Purpur",
+        "color_night": "Mitternachtsblau",
+        "color_sand": "Wüstensand",
+        "color_emerald": "Smaragdminze"
     }
 }
 
@@ -593,12 +599,12 @@ class PuzzleEngine:
 
     def get_overall_progress_data(self, config_data):
         """
-        English: Aggregates data using file size instead of puzzle counts for speed.
+        Aggregates data using file size instead of puzzle counts for speed.
         """
         overall_files = []
         grand_total_solved = 0
         grand_total_score = 0
-        # English: We can't really sum 'performance' easily with mixed file sizes,
+        # We can't really sum 'performance' easily with mixed file sizes,
         # so we'll focus on absolute totals.
 
         recent_files = config_data.get("recent_files", [])
@@ -622,7 +628,7 @@ class PuzzleEngine:
                 except Exception as e:
                     print(f"Error loading {results_path}: {e}")
 
-            # English: Get file size in MB for a cleaner display
+            # Get file size in MB for a cleaner display
             file_size_bytes = os.path.getsize(file_path)
             file_size_mb = file_size_bytes / (1024 * 1024)
 
@@ -645,7 +651,7 @@ class PuzzleEngine:
 
     def get_overall_stats(self):
         """
-        English: Gathers stats from config.json and the corresponding _results.json files.
+        Gathers stats from config.json and the corresponding _results.json files.
         """
         overall_stats = []
         grand_total_puzzles = 0
@@ -655,7 +661,7 @@ class PuzzleEngine:
             if not os.path.exists(file_path):
                 continue
 
-            # English: Matches your example: filename + "_results.json"
+            # Matches your example: filename + "_results.json"
             base_path = os.path.splitext(file_path)[0]
             results_path = f"{base_path}_results.json"
 
@@ -666,10 +672,10 @@ class PuzzleEngine:
                 try:
                     with open(results_path, 'r') as f:
                         data = json.load(f)
-                        # English: solved_count is the number of entries in results_log
+                        # solved_count is the number of entries in results_log
                         log = data.get("results_log", [])
                         solved_count = len(log)
-                        # English: Sum of the second element in each pair [index, score]
+                        # Sum of the second element in each pair [index, score]
                         total_score = sum(entry[1] for entry in log if len(entry) > 1)
                 except Exception as e:
                     print(f"Error reading {results_path}: {e}")
@@ -705,17 +711,17 @@ class FilterWindow(tk.Toplevel):
         self.stats = stats
 
         self.title(self.t("filter_title"))
-        # English: Increased height to show more themes at once
+        # Increased height to show more themes at once
         self.geometry("480x800")
         self.configure(bg="#f8f9fa")
         self.resizable(False, False)
 
-        # English: State variables
+        # State variables
         self.use_theme = tk.BooleanVar(value=getattr(self.parent, 'last_use_theme', False))
         self.use_rating = tk.BooleanVar(value=getattr(self.parent, 'last_use_rating', False))
         self.selected_theme = tk.StringVar(value=getattr(self.parent, 'last_theme_filter', ""))
 
-        # English: UI Header
+        # UI Header
         tk.Label(self, text=self.t("filter_settings"), font=("Segoe UI", 14, "bold"),
                  bg="#f8f9fa", fg="#2c3e50").pack(pady=10)
 
@@ -754,22 +760,22 @@ class FilterWindow(tk.Toplevel):
         self.theme_container = tk.Frame(theme_group, bg="white", relief=tk.SOLID, borderwidth=1)
         self.theme_container.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        # English: Create a dedicated style for the thick scrollbar
+        # Create a dedicated style for the thick scrollbar
         style = ttk.Style()
-        style.configure("Thick.Vertical.TScrollbar", width=25)  # English: Extra wide for Chromebook touch
+        style.configure("Thick.Vertical.TScrollbar", width=25)  # Extra wide for Chromebook touch
 
-        # English: Canvas with scrollbar visibility fix
+        # Canvas with scrollbar visibility fix
         self.canvas = tk.Canvas(self.theme_container, bg="white", highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.theme_container, orient="vertical",
                                   command=self.canvas.yview, style="Thick.Vertical.TScrollbar")
 
         self.scrollable_frame = tk.Frame(self.canvas, bg="white")
 
-        # English: Ensure the internal frame takes up the full width of the canvas
+        # Ensure the internal frame takes up the full width of the canvas
         self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
 
         def _on_canvas_configure(event):
-            # English: Update the width of the inner frame to match the canvas
+            # Update the width of the inner frame to match the canvas
             self.canvas.itemconfig(self.canvas_window, width=event.width)
 
         self.canvas.bind("<Configure>", _on_canvas_configure)
@@ -777,29 +783,29 @@ class FilterWindow(tk.Toplevel):
 
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        # English: Pack the scrollbar FIRST to ensure visibility
+        # Pack the scrollbar FIRST to ensure visibility
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # English: Populate themes
+        # Populate themes
         for theme, count in stats['themes'].items():
             row = tk.Frame(self.scrollable_frame, bg="white", cursor="hand2")
-            row.pack(fill=tk.X, pady=1, padx=2)  # English: Reduced pady to show more items
+            row.pack(fill=tk.X, pady=1, padx=2)  # Reduced pady to show more items
 
             display_name = self.t(theme.lower().replace(" ", "_")) or theme
             tk.Label(row, text=display_name, bg="white", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=10)
 
-            # English: Pushed count label to the far right with anchor and padx
+            # Pushed count label to the far right with anchor and padx
             tk.Label(row, text=str(count), bg="white", fg="#95a5a6",
                      font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT, padx=15)
 
             for w in (row, row.winfo_children()[0], row.winfo_children()[1]):
                 w.bind("<Button-1>", lambda e, t=theme: self._select_theme(t))
-                # English: Hover effect
+                # Hover effect
                 w.bind("<Enter>", lambda e, r=row: r.configure(bg="#f0f7ff"))
                 w.bind("<Leave>", lambda e, r=row: r.configure(bg="white"))
 
-        # English: Mousewheel support for scrolling
+        # Mousewheel support for scrolling
         def _on_mousewheel(event):
             if event.num == 4:
                 self.canvas.yview_scroll(-1, "units")
@@ -826,24 +832,24 @@ class FilterWindow(tk.Toplevel):
                                                                                 padx=2)
 
     def _select_theme(self, theme):
-        """ English: Sets active theme and auto-enables the checkbox. """
+        """ Sets active theme and auto-enables the checkbox. """
         self.selected_theme.set(theme)
         self.use_theme.set(True)
         self._toggle_entries()
 
     def _toggle_entries(self):
-        """ English: Enables/disables widgets based on checkboxes. """
+        """ Enables/disables widgets based on checkboxes. """
         r_state = "normal" if self.use_rating.get() else "disabled"
         self.min_rating.config(state=r_state)
         self.max_rating.config(state=r_state)
 
-        # English: Visual fade effect for the theme list
+        # Visual fade effect for the theme list
         alpha_bg = "white" if self.use_theme.get() else "#f0f0f0"
         self.scrollable_frame.config(bg=alpha_bg)
         self.canvas.config(bg=alpha_bg)
 
     def _apply(self):
-        """ English: Applies logic and saves state to parent. """
+        """ Applies logic and saves state to parent. """
         try:
             filters = {
                 'use_theme': self.use_theme.get(),
@@ -852,7 +858,7 @@ class FilterWindow(tk.Toplevel):
                 'min_rating': int(self.min_rating.get() or 0),
                 'max_rating': int(self.max_rating.get() or 9999)
             }
-            # English: Persistence
+            # Persistence
             self.parent.last_use_theme = filters['use_theme']
             self.parent.last_use_rating = filters['use_rating']
             self.parent.last_theme_filter = filters['theme']
@@ -865,7 +871,7 @@ class FilterWindow(tk.Toplevel):
             messagebox.showerror("Error", "Please enter valid numbers for rating.")
 
     def _reset_filter(self):
-        """ English: Removes all filters. """
+        """ Removes all filters. """
         self.parent.last_use_theme = False
         self.parent.last_use_rating = False
         self.parent.reset_database_filter()
@@ -1516,7 +1522,7 @@ class OverallProgressWindow(tk.Toplevel):
         summary_frame = tk.Frame(self, bg=summary_bg, pady=25)
         summary_frame.pack(fill=tk.X)
 
-        # English: Display global metrics
+        # Display global metrics
         tk.Label(summary_frame, text=self.t("overall_performance"),
                  bg=summary_bg, fg="#bdc3c7", font=("Segoe UI", 11)).pack()
 
@@ -1555,7 +1561,7 @@ class OverallProgressWindow(tk.Toplevel):
             row = tk.Frame(scroll_frame, bg="white", pady=15)
             row.pack(fill=tk.X)
 
-            # English: Left side - File details
+            # Left side - File details
             info_frame = tk.Frame(row, bg="white")
             info_frame.pack(side=tk.LEFT, padx=10)
             tk.Label(info_frame, text=f['name'], bg="white", font=("Segoe UI", 10, "bold")).pack(anchor="w")
@@ -1563,20 +1569,20 @@ class OverallProgressWindow(tk.Toplevel):
             short_path = (f['full_path'][-50:] if len(f['full_path']) > 50 else f['full_path'])
             tk.Label(info_frame, text=short_path, bg="white", font=("Consolas", 8), fg="#7f8c8d").pack(anchor="w")
 
-            # English: Right side - Metrics
+            # Right side - Metrics
             tk.Label(row, text=f"{f['score']} pts", width=12, anchor="e", bg="white", fg="#2980b9",
                      font=("Segoe UI", 10, "bold")).pack(side=tk.RIGHT, padx=5)
 
-            # English: Display size in MB
+            # Display size in MB
             size_txt = f"{f['size_mb']:.2f} MB"
             tk.Label(row, text=size_txt, width=12, anchor="e", bg="white", fg="#7f8c8d").pack(side=tk.RIGHT, padx=5)
 
-            # English: Solved count as a small badge
+            # Solved count as a small badge
             tk.Label(row, text=f"✓ {f['solved']}", bg="#e8f5e9", fg="#2e7d32", padx=5).pack(side=tk.RIGHT, padx=10)
 
             tk.Frame(scroll_frame, height=1, bg="#f1f2f6").pack(fill=tk.X)
 
-        # English: Standard mousewheel binding
+        # Standard mousewheel binding
         def _on_mousewheel(event):
             if event.num == 4:
                 canvas.yview_scroll(-1, "units")
@@ -1840,10 +1846,19 @@ class ChessPuzzleApp(tk.Toplevel):
 
         lang_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=self.t("language"), menu=lang_m)
-        for code, name in [("en", "English"), ("nl", "Nederlands"), ("de", "Deutsch"), ("fr", "Français"),
-                           ("es", "Español")]:
-            lang_m.add_command(label=name, command=lambda c=code: self._set_lang(c))
 
+        # English: Dynamically generate menu items based on the TRANSLATIONS dictionary
+        # 'code' will be "en", "nl", etc.
+        # 'content' will be the inner dictionary containing "lang_name"
+        for code, content in TRANSLATIONS.items():
+            # English: Use the "lang_name" defined in the dictionary for the label
+            display_name = content.get("lang_name", code)
+
+            # English: Bind the command to set the language
+            lang_m.add_command(
+                label=display_name,
+                command=lambda c=code: self._set_lang(c)
+            )
         # Submenu: Board Color
         color_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=self.t("board_color"), menu=color_m)
@@ -2103,19 +2118,19 @@ class ChessPuzzleApp(tk.Toplevel):
         """
         Calculates current database statistics and opens the filter window.
         """
-        # English: Generate stats to get the list of available themes and rating ranges
+        # Generate stats to get the list of available themes and rating ranges
         stats = self.engine.analyze_database()
 
-        # English: Open the window and pass the stats object
+        # Open the window and pass the stats object
         FilterWindow(self, stats)
 
     def _show_overall_progress(self):
         """
-        English: Triggers data collection and shows the overall progress dashboard.
+        Triggers data collection and shows the overall progress dashboard.
         """
-        # English: Collect data via the engine
+        # Collect data via the engine
         stats = self.engine.get_overall_progress_data(self.config_data)
-        # English: Open the newly named window
+        # Open the newly named window
         OverallProgressWindow(self, stats)
 
     def _show_db_analysis(self):
@@ -2529,34 +2544,34 @@ class ChessPuzzleApp(tk.Toplevel):
         filtered_list = []
 
         for p in self.engine.puzzles:
-            # English: Initial assumption is that the puzzle matches
+            # Initial assumption is that the puzzle matches
             rating_ok = True
             theme_ok = True
 
-            # 1. English: Handle Rating Filter if checkbox is active
+            # 1. Handle Rating Filter if checkbox is active
             if criteria.get('use_rating'):
                 try:
-                    # English: Ensure we compare integers
+                    # Ensure we compare integers
                     puzzle_rating = int(p.get('rating', 0))
                     rating_ok = criteria['min_rating'] <= puzzle_rating <= criteria['max_rating']
                 except (ValueError, TypeError):
                     rating_ok = False
 
-            # 2. English: Handle Theme Filter if checkbox is active
+            # 2. Handle Theme Filter if checkbox is active
             if criteria.get('use_theme'):
                 selected_theme = criteria.get('theme', '').lower()
                 puzzle_themes = p.get('themes', '').lower()
                 theme_ok = selected_theme in puzzle_themes
 
-            # English: Only add to selection if both conditions are met
+            # Only add to selection if both conditions are met
             if rating_ok and theme_ok:
                 filtered_list.append(p)
 
-        # 3. English: Update the UI and selection
+        # 3. Update the UI and selection
         if filtered_list:
             self.engine.current_selection = filtered_list
             self.load_puzzle()
-            # English: Inform user about the results
+            # Inform user about the results
             msg = f"{len(filtered_list)} {self.t('puzzles_found')}"
             messagebox.showinfo(self.t("info"), msg)
         else:
@@ -2579,7 +2594,7 @@ class ChessPuzzleApp(tk.Toplevel):
         self.master.destroy()
 
 
-# --- [HistoryWindow & HistoryDetailWindow classes would follow here] ---
+# main call
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', nargs='?', default=None)  # Default is now None
