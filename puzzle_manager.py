@@ -743,7 +743,7 @@ class FilterWindow(tk.Toplevel):
 
         self.title(self.t("filter_title"))
         # English: Increased width to accommodate the keypad on the right
-        self.geometry("1200x800")
+        self.geometry("1200x650")
         self.configure(bg="#f8f9fa")
         self.resizable(False, False)
 
@@ -793,8 +793,17 @@ class FilterWindow(tk.Toplevel):
         self.max_rating.bind("<Button-1>", lambda e: self.max_rating.focus_set())
 
         # --- Theme Section ---
-        theme_group = tk.LabelFrame(self.left_col, text=self.t("filter_theme"), bg="#f8f9fa", padx=10, pady=10)
-        theme_group.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # English: Set explicit height for the entire group to keep the UI compact
+        theme_group = tk.LabelFrame(
+            self.left_col,
+            text=self.t("filter_theme"),
+            bg="#f8f9fa",
+            padx=10,
+            pady=10,
+            height=400  # English: Adjust this value to fit all inner widgets
+        )
+        theme_group.pack_propagate(False)  # English: Force the 400px height
+        theme_group.pack(fill=tk.X, padx=10, pady=5)
 
         tk.Checkbutton(theme_group, text=self.t("enable_theme_filter"), variable=self.use_theme,
                        bg="#f8f9fa", command=self._toggle_entries).pack(anchor=tk.W)
@@ -804,8 +813,17 @@ class FilterWindow(tk.Toplevel):
         self.lbl_active_theme.pack(pady=2)
 
         # --- Theme List Container ---
-        self.theme_container = tk.Frame(theme_group, bg="white", relief=tk.SOLID, borderwidth=1)
-        self.theme_container.pack(fill=tk.BOTH, expand=True, pady=5)
+        # English: Set explicit height to 300px
+        self.theme_container = tk.Frame(
+            theme_group,
+            bg="white",
+            relief=tk.SOLID,
+            borderwidth=1,
+            height=300
+        )
+        # English: Prevent the frame from shrinking or growing based on its children
+        self.theme_container.pack_propagate(False)
+        self.theme_container.pack(fill=tk.X, expand=False, pady=5)
 
         # Create a dedicated style for the thick scrollbar
         style = ttk.Style()
