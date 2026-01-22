@@ -1603,7 +1603,7 @@ class ProgressWindow(tk.Toplevel):
         self.parent = parent
         self.title(self.parent.t("progress"))
         # Reduced height from 550 to 500 to remove dead space
-        self.geometry("600x500")
+        self.geometry("900x500")
 
         # 1. Canvas for the chart
         # Increased height slightly to use more of the top area
