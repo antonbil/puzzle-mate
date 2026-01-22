@@ -516,7 +516,7 @@ class PuzzleEngine:
                         extracted_rating = black_elo
                     else:
                         # 2. Fallback: Scan player names for patterns like "(2121)"
-                        # English: Using regex to find digits inside parentheses
+                        # Using regex to find digits inside parentheses
                         pattern = r"\((\d+)\)"
                         match_w = re.search(pattern, w)
                         match_b = re.search(pattern, b)
@@ -551,7 +551,7 @@ class PuzzleEngine:
                         'date': headers.get("Date", ""),
                         'event': headers.get("Event", "Chess Puzzle"),
                         'site': headers.get("Site", ""),  # Link to Lichess
-                        'rating': extracted_rating,  # English: Using our new extracted rating
+                        'rating': extracted_rating,  # Using our new extracted rating
                         'themes': headers.get("Themes", "")
                     })
         except Exception as e:
@@ -1042,15 +1042,6 @@ class HistoryDetailWindow(tk.Toplevel):
         self.piece_images = load_images(self.piece_set, self.field_size)
 
     def _setup_ui(self):
-        # 1. Add a Menu Bar
-        self.menu_bar = tk.Menu(self)
-        self.config(menu=self.menu_bar)
-
-        # File menu with Close option
-        file_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label=self.t("file") or "File", menu=file_menu)
-        file_menu.add_command(label=self.t("close"), command=self.destroy)
-
         # 2. Board Canvas
         self.canvas = tk.Canvas(
             self,
@@ -1076,12 +1067,30 @@ class HistoryDetailWindow(tk.Toplevel):
         )
         self.move_text_container.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
-        # 4. Navigation Buttons (Close is now in the menu)
-        btn_frame = tk.Frame(self)
-        btn_frame.pack(pady=10)
+        # --- 4. Navigation & Action Buttons ---
+        # Main container for all buttons at the bottom
+        btn_container = tk.Frame(self)
+        btn_container.pack(pady=10, fill=tk.X, padx=10)
 
-        ttk.Button(btn_frame, text="< " + self.t("back"), command=self._prev_move).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text=self.t("forward") + " >", command=self._next_move).pack(side=tk.LEFT, padx=5)
+        # Left spacer to help balance the center buttons
+        tk.Frame(btn_container, width=100).pack(side=tk.LEFT, expand=True)
+
+        # Sub-frame for navigation (centered)
+        nav_frame = tk.Frame(btn_container)
+        nav_frame.pack(side=tk.LEFT)
+
+        ttk.Button(nav_frame, text="< " + self.t("back"),
+                   command=self._prev_move).pack(side=tk.LEFT, padx=5)
+        ttk.Button(nav_frame, text=self.t("forward") + " >",
+                   command=self._next_move).pack(side=tk.LEFT, padx=5)
+
+        # Right-aligned Close button
+        # We use side=tk.RIGHT to push it to the far end
+        ttk.Button(btn_container, text=self.t("close"),
+                   command=self.destroy).pack(side=tk.RIGHT, padx=5)
+
+        # Second spacer to fill the gap between center and right
+        tk.Frame(btn_container, width=0).pack(side=tk.LEFT, expand=True)
 
     def _update_display(self):
         """ Renders moves as clickable objects using board logic for turn detection. """
@@ -1310,7 +1319,7 @@ class HistoryWindow(tk.Toplevel):
         self.parent = parent
         self.piece_set = piece_set
         self.title(self.parent.t("history"))
-        self.geometry("600x600")  # Slightly wider for larger fonts
+        self.geometry("600x650")  # Slightly wider for larger fonts
         # Initialize the menu for this specific window
         self._setup_menu()
 
@@ -1391,6 +1400,18 @@ class HistoryWindow(tk.Toplevel):
     def _setup_menu(self):
         """ Creates a menu bar for the History window. """
         # Create the main menu bar
+        # Create a dedicated toolbar for frequently used actions
+        toolbar = tk.Frame(self, bg="#f0f0f0", height=50)
+        toolbar.pack(side=tk.TOP, fill=tk.X)
+
+        # Create a style for large, touchable buttons
+        style = ttk.Style()
+        style.configure("Toolbar.TButton", font=("Segoe UI", 12, "bold"), padding=10)
+
+        # Add big buttons for important menu actions
+        ttk.Button(toolbar, text="📂 " + t("exit_window"),
+                   style="Toolbar.TButton", command=self.destroy).pack(side=tk.LEFT, padx=5, pady=5)
+        return
         self.menu_bar = tk.Menu(self)
         self.config(menu=self.menu_bar)
 
@@ -1795,6 +1816,9 @@ class ChessPuzzleApp(tk.Toplevel):
         self.field_size = self.config_data.get("field_size", 70)
         self.piece_set = self.config_data.get("piece_set", "staunty")
         self.lang = self.config_data.get("language", "en")
+        # Try to force a larger font for all menu items
+        self.option_add('*Menu.font', 'SegoeUI 16')
+        self.option_add('*Menu.tearOff', 0)
         # Load Board Theme from config
         # Default to green theme if not set
         self.board_theme = self.config_data.get("board_theme", "green")
