@@ -743,7 +743,7 @@ class FilterWindow(tk.Toplevel):
 
         self.title(self.t("filter_title"))
         # English: Increased width to accommodate the keypad on the right
-        self.geometry("1150x700")
+        self.geometry("1200x800")
         self.configure(bg="#f8f9fa")
         self.resizable(False, False)
 
