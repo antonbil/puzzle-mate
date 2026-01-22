@@ -736,14 +736,18 @@ class FilterWindow(tk.Toplevel):
         self.rating_frame.pack(fill=tk.X, pady=5)
 
         tk.Label(self.rating_frame, text=self.t("min"), bg="#f8f9fa").pack(side=tk.LEFT)
-        self.min_rating = ttk.Entry(self.rating_frame, width=8)
+        self.min_rating = tk.Entry(self.rating_frame, width=8, relief=tk.SOLID, borderwidth=1)
         self.min_rating.pack(side=tk.LEFT, padx=5)
         self.min_rating.insert(0, getattr(self.parent, 'last_min_rating', "0"))
 
         tk.Label(self.rating_frame, text=self.t("max"), bg="#f8f9fa").pack(side=tk.LEFT, padx=(10, 0))
-        self.max_rating = ttk.Entry(self.rating_frame, width=8)
+        self.max_rating = tk.Entry(self.rating_frame, width=8, relief=tk.SOLID, borderwidth=1)
         self.max_rating.pack(side=tk.LEFT, padx=5)
         self.max_rating.insert(0, getattr(self.parent, 'last_max_rating', "3000"))
+        # Force focus and try to trigger the virtual keyboard on click
+        self.min_rating.bind("<Button-1>", lambda e: self.min_rating.focus_set())
+
+        self.max_rating.bind("<Button-1>", lambda e: self.max_rating.focus_set())
 
         # --- Theme Section ---
         theme_group = tk.LabelFrame(self, text=self.t("filter_theme"), bg="#f8f9fa", padx=10, pady=10)
@@ -1847,14 +1851,14 @@ class ChessPuzzleApp(tk.Toplevel):
         lang_m = tk.Menu(settings_m, tearoff=0)
         settings_m.add_cascade(label=self.t("language"), menu=lang_m)
 
-        # English: Dynamically generate menu items based on the TRANSLATIONS dictionary
+        # Dynamically generate menu items based on the TRANSLATIONS dictionary
         # 'code' will be "en", "nl", etc.
         # 'content' will be the inner dictionary containing "lang_name"
         for code, content in TRANSLATIONS.items():
-            # English: Use the "lang_name" defined in the dictionary for the label
+            # Use the "lang_name" defined in the dictionary for the label
             display_name = content.get("lang_name", code)
 
-            # English: Bind the command to set the language
+            # Bind the command to set the language
             lang_m.add_command(
                 label=display_name,
                 command=lambda c=code: self._set_lang(c)
