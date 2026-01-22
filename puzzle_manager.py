@@ -800,7 +800,7 @@ class FilterWindow(tk.Toplevel):
             bg="#f8f9fa",
             padx=10,
             pady=10,
-            height=400  # English: Adjust this value to fit all inner widgets
+            height=600  # English: Adjust this value to fit all inner widgets
         )
         theme_group.pack_propagate(False)  # English: Force the 400px height
         theme_group.pack(fill=tk.X, padx=10, pady=5)
@@ -819,7 +819,7 @@ class FilterWindow(tk.Toplevel):
             bg="white",
             relief=tk.SOLID,
             borderwidth=1,
-            height=300
+            height=500
         )
         # English: Prevent the frame from shrinking or growing based on its children
         self.theme_container.pack_propagate(False)
