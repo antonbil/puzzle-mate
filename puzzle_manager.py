@@ -1514,7 +1514,7 @@ class OverallProgressWindow(tk.Toplevel):
         self.t = parent.t
 
         self.title(self.t("overall_progress_title"))
-        self.geometry("750x700")
+        self.geometry("900x700")
         self.configure(bg="#f8f9fa")
 
         # --- Summary Header ---
