@@ -735,31 +735,39 @@ class PuzzleEngine:
 
 # --- CUSTOM WIDGETS ---
 class FilterWindow(tk.Toplevel):
-    def __init__(self, parent, stats):
+    def __init__(self, parent, stats, theme):
         super().__init__(parent)
         self.parent = parent
+        self.theme = theme
         self.t = parent.t
         self.stats = stats
+
+        # English: Extract theme colors for easier access
+        bg_color = self.theme["light"]
+        header_color = self.theme["dark"]
+        accent_color = self.theme["frame"]
+        text_on_dark = "#ffffff"
+        text_on_light = self.theme["inner_line"]
 
         self.title(self.t("filter_title"))
         # English: Increased width to accommodate the keypad on the right
         self.geometry("1200x850")
-        self.configure(bg="#f8f9fa")
+        self.configure(bg=bg_color)
         self.resizable(False, False)
 
         # UI Header
         tk.Label(self, text=self.t("filter_settings"), font=("Segoe UI", 14, "bold"),
-                 bg="#f8f9fa", fg="#2c3e50").pack(pady=10)
+                 bg=bg_color, fg="#2c3e50").pack(pady=10)
         # English: Main split container
-        self.main_container = tk.Frame(self, bg="#f8f9fa")
+        self.main_container = tk.Frame(self, bg=bg_color)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # --- LEFT COLUMN: Filters ---
-        self.left_col = tk.Frame(self.main_container, bg="#f8f9fa")
+        self.left_col = tk.Frame(self.main_container, bg=bg_color)
         self.left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # --- RIGHT COLUMN: Numeric Keypad ---
-        self.right_col = tk.Frame(self.main_container, bg="#f8f9fa", padx=20)
+        self.right_col = tk.Frame(self.main_container, bg=bg_color, padx=20)
         self.right_col.pack(side=tk.RIGHT, fill=tk.Y)
         # State variables
         self.use_theme = tk.BooleanVar(value=getattr(self.parent, 'last_use_theme', False))
@@ -769,21 +777,21 @@ class FilterWindow(tk.Toplevel):
 
         # English: Move your existing Rating and Theme groups to self.left_col
         # Change 'rating_group = tk.LabelFrame(self, ...)' to:
-        rating_group = tk.LabelFrame(self.left_col, text=self.t("filter_rating_range"), bg="#f8f9fa", padx=10, pady=10)
+        rating_group = tk.LabelFrame(self.left_col, text=self.t("filter_rating_range"), bg=bg_color, fg=accent_color, padx=10, pady=10)
         rating_group.pack(fill=tk.X, padx=10, pady=5)
 
         tk.Checkbutton(rating_group, text=self.t("enable_rating_filter"), variable=self.use_rating,
-                       bg="#f8f9fa", command=self._toggle_entries).pack(anchor=tk.W)
+                       bg=bg_color, fg=text_on_light, command=self._toggle_entries).pack(anchor=tk.W)
 
-        self.rating_frame = tk.Frame(rating_group, bg="#f8f9fa")
+        self.rating_frame = tk.Frame(rating_group, bg=bg_color)
         self.rating_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(self.rating_frame, text=self.t("min"), bg="#f8f9fa").pack(side=tk.LEFT)
+        tk.Label(self.rating_frame, text=self.t("min"), bg=bg_color, fg=text_on_light).pack(side=tk.LEFT)
         self.min_rating = tk.Entry(self.rating_frame, width=8, relief=tk.SOLID, borderwidth=1)
         self.min_rating.pack(side=tk.LEFT, padx=5)
         self.min_rating.insert(0, getattr(self.parent, 'last_min_rating', "0"))
 
-        tk.Label(self.rating_frame, text=self.t("max"), bg="#f8f9fa").pack(side=tk.LEFT, padx=(10, 0))
+        tk.Label(self.rating_frame, text=self.t("max"), bg=bg_color, fg=text_on_light).pack(side=tk.LEFT, padx=(10, 0))
         self.max_rating = tk.Entry(self.rating_frame, width=8, relief=tk.SOLID, borderwidth=1)
         self.max_rating.pack(side=tk.LEFT, padx=5)
         self.max_rating.insert(0, getattr(self.parent, 'last_max_rating', "3000"))
@@ -797,7 +805,7 @@ class FilterWindow(tk.Toplevel):
         theme_group = tk.LabelFrame(
             self.left_col,
             text=self.t("filter_theme"),
-            bg="#f8f9fa",
+            bg=bg_color, fg=accent_color,
             padx=10,
             pady=10,
             height=530  # English: Adjust this value to fit all inner widgets
@@ -806,17 +814,17 @@ class FilterWindow(tk.Toplevel):
         theme_group.pack(fill=tk.X, padx=10, pady=5)
 
         tk.Checkbutton(theme_group, text=self.t("enable_theme_filter"), variable=self.use_theme,
-                       bg="#f8f9fa", command=self._toggle_entries).pack(anchor=tk.W)
+                       bg=bg_color, fg=text_on_light, activebackground=bg_color, command=self._toggle_entries).pack(anchor=tk.W)
 
         self.lbl_active_theme = tk.Label(theme_group, textvariable=self.selected_theme,
-                                         fg="#2980b9", font=("Segoe UI", 10, "bold"), bg="#f8f9fa")
+                                         fg=self.theme["alert"], font=("Segoe UI", 11, "bold"), bg=bg_color)
         self.lbl_active_theme.pack(pady=2)
 
         # --- Theme List Container ---
         # English: Set explicit height to 300px
         self.theme_container = tk.Frame(
             theme_group,
-            bg="white",
+            bg=bg_color,
             relief=tk.SOLID,
             borderwidth=1,
             height=430
@@ -830,11 +838,11 @@ class FilterWindow(tk.Toplevel):
         style.configure("Thick.Vertical.TScrollbar", width=25)  # Extra wide for Chromebook touch
 
         # Canvas with scrollbar visibility fix
-        self.canvas = tk.Canvas(self.theme_container, bg="white", highlightthickness=0)
+        self.canvas = tk.Canvas(self.theme_container, bg=header_color, highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.theme_container, orient="vertical",
                                   command=self.canvas.yview, style="Thick.Vertical.TScrollbar")
 
-        self.scrollable_frame = tk.Frame(self.canvas, bg="white")
+        self.scrollable_frame = tk.Frame(self.canvas, bg=header_color)
 
         # Ensure the internal frame takes up the full width of the canvas
         self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
@@ -858,10 +866,10 @@ class FilterWindow(tk.Toplevel):
             row.pack(fill=tk.X, pady=1, padx=2)  # Reduced pady to show more items
 
             display_name = self.t(theme.lower().replace(" ", "_")) or theme
-            tk.Label(row, text=display_name, bg="white", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=10)
+            tk.Label(row, text=display_name, bg="white", fg=accent_color, font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=10)
 
             # Pushed count label to the far right with anchor and padx
-            tk.Label(row, text=str(count), bg="white", fg="#95a5a6",
+            tk.Label(row, text=str(count), bg="white", fg=header_color,
                      font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT, padx=15)
 
             for w in (row, row.winfo_children()[0], row.winfo_children()[1]):
@@ -885,46 +893,42 @@ class FilterWindow(tk.Toplevel):
 
         self._toggle_entries()
 
-        self._setup_keypad()
+        self._setup_keypad(bg_color, header_color, text_on_dark)
 
         # --- Action Buttons ---
         btn_frame = tk.Frame(self, bg="#f8f9fa")
         btn_frame.pack(fill=tk.X, padx=30, pady=15)
 
-        ttk.Button(btn_frame, text=self.t("apply_filter"), command=self._apply).pack(side=tk.LEFT, expand=True,
-                                                                                     fill=tk.X, padx=2)
-        ttk.Button(btn_frame, text=self.t("remove_filter"), command=self._reset_filter).pack(side=tk.LEFT, expand=True,
-                                                                                             fill=tk.X, padx=2)
-        ttk.Button(btn_frame, text=self.t("cancel"), command=self.destroy).pack(side=tk.LEFT, expand=True, fill=tk.X,
-                                                                                padx=2)
+        for btn_txt, cmd in [(self.t("apply_filter"), self._apply),
+                             (self.t("remove_filter"), self._reset_filter),
+                             (self.t("cancel"), self.destroy)]:
+            b = tk.Button(btn_frame, text=btn_txt, command=cmd,
+                          bg=header_color, fg=text_on_dark, font=("Segoe UI", 10, "bold"),
+                          activebackground=accent_color, relief=tk.RAISED, pady=5)
+            b.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
         # Track which entry currently has focus for the keypad
         self.active_entry = self.min_rating
         self.min_rating.bind("<FocusIn>", lambda e: self._set_active(self.min_rating))
         self.max_rating.bind("<FocusIn>", lambda e: self._set_active(self.max_rating))
 
-
-    def _setup_keypad(self):
-        """ English: Builds the keypad in the right sidebar. """
-        tk.Label(self.right_col, text="NumPad", font=("Segoe UI", 12, "bold"), bg="#f8f9fa").pack(pady=10)
-
-        keypad_frame = tk.Frame(self.right_col, bg="#f8f9fa")
-        keypad_frame.pack()
-
-        self.active_entry = self.min_rating
-        self.min_rating.bind("<FocusIn>", lambda e: self._set_active(self.min_rating))
-        self.max_rating.bind("<FocusIn>", lambda e: self._set_active(self.max_rating))
+    def _setup_keypad(self, bg, btn_bg, btn_fg):
+        """ English: Styles the keypad buttons using the board theme colors. """
+        tk.Label(self.right_col, text="Input", bg=bg, font=("Segoe UI", 12, "bold")).pack(pady=5)
+        kp_frame = tk.Frame(self.right_col, bg=bg)
+        kp_frame.pack()
 
         buttons = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '←']
         r, c = 0, 0
-        for btn_text in buttons:
-            cmd = lambda t=btn_text: self._keypad_press(t)
-            btn = tk.Button(keypad_frame, text=btn_text, width=6, height=3,
-                            font=("Segoe UI", 12, "bold"), command=cmd,
-                            bg="white", relief=tk.GROOVE)
-            btn.grid(row=r, column=c, padx=5, pady=5)
+        for b_text in buttons:
+            # English: 'C' and 'Back' get the 'alert' color for visibility
+            color = self.theme["alert"] if b_text in ['C', '←'] else btn_bg
+
+            btn = tk.Button(kp_frame, text=b_text, width=6, height=2,
+                            font=("Segoe UI", 14, "bold"), bg=color, fg="white",
+                            command=lambda t=b_text: self._keypad_press(t))
+            btn.grid(row=r, column=c, padx=3, pady=3)
             c += 1
-            if c > 2:
-                c, r = 0, r + 1
+            if c > 2: c = 0; r += 1
 
     def _set_active(self, entry):
         """ Remembers which entry field the user is typing into. """
@@ -1501,11 +1505,12 @@ class HistoryWindow(tk.Toplevel):
 
 
 class AnalysisWindow(tk.Toplevel):
-    def __init__(self, parent, stats):
+    def __init__(self, parent, stats, theme):
         super().__init__(parent)
         # Assuming parent has access to the translation method
         self.t = parent.t
         self.parent = parent
+        self.theme = theme
 
         self.title(self.t("analysis_title"))
         self.geometry("450x600")
@@ -2265,7 +2270,7 @@ class ChessPuzzleApp(tk.Toplevel):
         stats = self.engine.analyze_database()
 
         # Open the window and pass the stats object
-        FilterWindow(self, stats)
+        FilterWindow(self, stats, self.current_theme)
 
     def _show_overall_progress(self):
         """
@@ -2286,7 +2291,7 @@ class ChessPuzzleApp(tk.Toplevel):
             return
         stats = self.engine.analyze_database()
         # AnalysisWindow is the class we defined in the previous step
-        AnalysisWindow(self, stats)
+        AnalysisWindow(self, stats, self.current_theme)
 
     def apply_filter(self, theme_query):
         """
